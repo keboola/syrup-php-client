@@ -41,35 +41,35 @@ class Client extends \Guzzle\Service\Client
 
         $client = new static($config->get('url'), $config);
 
-		// Attach a service description to the client
-		$description = ServiceDescription::factory(__DIR__ . '/service.json');
-		$client->setDescription($description);
-		$client->setBaseUrl($config->get('url'));
+        // Attach a service description to the client
+        $description = ServiceDescription::factory(__DIR__ . '/service.json');
+        $client->setDescription($description);
+        $client->setBaseUrl($config->get('url'));
 
-		// Setup exponential backoff
-		$backoffPlugin = BackoffPlugin::getExponentialBackoff();
-		$client->addSubscriber($backoffPlugin);
+        // Setup exponential backoff
+        $backoffPlugin = BackoffPlugin::getExponentialBackoff();
+        $client->addSubscriber($backoffPlugin);
 
         return $client;
     }
 
     /**
-   	 * Create a new async job
-   	 *
-   	 * Available options are
-   	 * 	- config - configuration id
-   	 *	- configData - configuration data
-   	 *
-   	 * @param $component
-   	 * @param array $options
+     * Create a new async job
+     *
+     * Available options are
+     * 	- config - configuration id
+     *	- configData - configuration data
+     *
+     * @param $component
+     * @param array $options
      * @return mixed
      */
-   	public function createJob($component, $options=array())
-   	{
-   		$params = $options;
-   		$params['component'] = $component;
-   		return $this->getCommand('CreateJob', $params)->execute();
-   	}
+    public function createJob($component, $options=array())
+    {
+        $params = $options;
+        $params['component'] = $component;
+        return $this->getCommand('CreateJob', $params)->execute();
+    }
 
     /**
      *
@@ -100,6 +100,7 @@ class Client extends \Guzzle\Service\Client
         }
         $finished = false;
         $attempt = 0;
+        $job = array();
         while(!$finished) {
             $job = $this->getJob($response["id"]);
             if (in_array($job["status"], $this->jobFinishedStates)) {
