@@ -1,0 +1,42 @@
+{
+    "name": "Keboola Syrup",
+    "apiVersion": "2015-02-11",
+    "baseUrl": "https://syrup.keboola.com",
+    "description": "Keboola Syrup PHP Client",
+    "operations": {
+        "GetJob": {
+            "httpMethod": "GET",
+            "uri": "queue/job/{job}",
+            "summary": "Get job detail",
+            "parameters": {
+                "job": {
+                    "location": "uri",
+                    "type": "string",
+                    "required": true
+                }
+            }
+        },
+        "CreateJob": {
+            "httpMethod": "POST",
+            "uri": "{component}/run",
+            "summary": "Create a new job for a Syrup component",
+            "parameters": {
+                "component": {
+                    "location": "uri",
+                    "type": "string",
+                    "required": true
+                },
+                "config": {
+                    "location": "json",
+                    "type": "string",
+                    "required": false
+                },
+                "configData": {
+                    "location": "json",
+                    "type": "array",
+                    "required": false
+                }
+            }
+        }
+    }
+}
