@@ -4,12 +4,6 @@ namespace Keboola\Syrup\Tests;
 use Guzzle\Http\Message\Response;
 use Guzzle\Plugin\Mock\MockPlugin;
 use Keboola\Syrup\Client;
-use Keboola\Syrup\ClientException;
-
-class MockClient extends Client
-{
-    protected $maxRetries = 1;
-}
 
 class ClientTest extends \PHPUnit_Framework_TestCase
 {
@@ -36,7 +30,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
             }'));
 
         $client->addSubscriber($mock);
-        $response = $client->createJob("test-component", array("config" => 1));
+        $client->createJob("test-component", array("config" => 1));
         $requests = $mock->getReceivedRequests();
 
         $this->assertCount(1, $requests);
@@ -179,9 +173,15 @@ class ClientTest extends \PHPUnit_Framework_TestCase
      */
     public function testRunJobMaxTries()
     {
-        $client = MockClient::factory(array(
+
+        $client = Client::factory(array(
             "token" => 'test'
         ));
+
+        $reflection = new \ReflectionClass($client);
+        $property = $reflection->getProperty('maxRetries');
+        $property->setAccessible(true);
+        $property->setValue($client, 1);
 
         $mock = new MockPlugin();
 
@@ -225,7 +225,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
      */
     public function testRunJobInvalidResponse()
     {
-        $client = MockClient::factory(array(
+        $client = Client::factory(array(
             "token" => 'test'
         ));
 
@@ -242,5 +242,4 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $client->addSubscriber($mock);
         $client->runJob("test-component", array("config" => 1));
     }
-
 }

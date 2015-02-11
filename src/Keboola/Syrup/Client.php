@@ -23,7 +23,7 @@ class Client extends \Guzzle\Service\Client
      * @param array $config
      * @return Client
      */
-    public static function factory($config=array())
+    public static function factory($config = array())
     {
         $default = array(
             'url' => static::DEFAULT_API_URL,
@@ -57,14 +57,14 @@ class Client extends \Guzzle\Service\Client
      * Create a new async job
      *
      * Available options are
-     * 	- config - configuration id
-     *	- configData - configuration data
+     *  - config - configuration id
+     *  - configData - configuration data
      *
      * @param $component
      * @param array $options
      * @return mixed
      */
-    public function createJob($component, $options=array())
+    public function createJob($component, $options = array())
     {
         $params = $options;
         $params['component'] = $component;
@@ -92,7 +92,7 @@ class Client extends \Guzzle\Service\Client
      * @return mixed
      * @throws ClientException
      */
-    public function runJob($component, $options=array())
+    public function runJob($component, $options = array())
     {
         $response = $this->createJob($component, $options);
         if (!isset($response["id"])) {
@@ -101,7 +101,7 @@ class Client extends \Guzzle\Service\Client
         $finished = false;
         $attempt = 0;
         $job = array();
-        while(!$finished) {
+        while (!$finished) {
             $job = $this->getJob($response["id"]);
             if (in_array($job["status"], $this->jobFinishedStates)) {
                 $finished = true;
