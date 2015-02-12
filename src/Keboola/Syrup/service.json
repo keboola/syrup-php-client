@@ -18,9 +18,14 @@
         },
         "CreateJob": {
             "httpMethod": "POST",
-            "uri": "{component}/run",
+            "uri": "{super}/{component}/run",
             "summary": "Create a new job for a Syrup component",
             "parameters": {
+                "super": {
+                    "location": "uri",
+                    "type": "string",
+                    "required": false
+                },
                 "component": {
                     "location": "uri",
                     "type": "string",

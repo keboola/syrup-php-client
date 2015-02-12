@@ -20,6 +20,11 @@ class Client extends \Guzzle\Service\Client
     protected $maxDelay = 300;
 
     /**
+     * @var string parent component, eg https://syrup.keboola.com/docker
+     */
+    protected $super = '';
+
+    /**
      * @param array $config
      * @return Client
      */
@@ -50,6 +55,10 @@ class Client extends \Guzzle\Service\Client
         $backoffPlugin = BackoffPlugin::getExponentialBackoff();
         $client->addSubscriber($backoffPlugin);
 
+        if ($config->get("super")) {
+            $client->super = $config->get("super");
+        }
+
         return $client;
     }
 
@@ -67,8 +76,10 @@ class Client extends \Guzzle\Service\Client
     public function createJob($component, $options = array())
     {
         $params = $options;
-        $params['component'] = $component;
-        return $this->getCommand('CreateJob', $params)->execute();
+        $params["component"] = $component;
+        $params["super"] = $this->super;
+        $command = $this->getCommand('CreateJob', $params);
+        return $command->execute();
     }
 
     /**
