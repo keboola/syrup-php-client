@@ -121,7 +121,7 @@ class Client extends \Guzzle\Service\Client
             if ($attempt > $this->maxRetries && !$finished) {
                 throw new ClientException("Too many retries.");
             }
-            sleep(min(2 ^ $attempt, $this->maxDelay));
+            sleep(min(pow(2, $attempt), $this->maxDelay));
         }
         return $job;
     }
