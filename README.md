@@ -51,6 +51,7 @@ use Keboola\Syrup\Client,
 
 $client = new Client([
   'token' => 'YOUR_TOKEN',
+  'runId' => 'CURRENT_RUNID'
 ]);
 
 $response = $client->runJob("test-component", array("config" => 1));

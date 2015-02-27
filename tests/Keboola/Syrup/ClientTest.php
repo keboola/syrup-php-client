@@ -14,7 +14,8 @@ class ClientTest extends \PHPUnit_Framework_TestCase
     public function testCreateJobWithConfig()
     {
         $client = Client::factory(array(
-            "token" => 'test'
+            "token" => 'test',
+            "runId" => 'runidtest'
         ));
 
         $mock = new MockPlugin();
@@ -43,6 +44,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("POST", $request->getMethod());
         $this->assertEquals('{"config":"1"}', $request->getBody()->readLine());
         $this->assertEquals("test", $request->getHeaders()->get("x-storageapi-token"));
+        $this->assertEquals("runidtest", $request->getHeaders()->get("x-kbc-runid"));
     }
 
     /**
@@ -51,7 +53,8 @@ class ClientTest extends \PHPUnit_Framework_TestCase
     public function testCreateJobWithConfigData()
     {
         $client = Client::factory(array(
-            "token" => 'test'
+            "token" => 'test',
+            "runId" => 'runidtest'
         ));
 
         $mock = new MockPlugin();
@@ -80,6 +83,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("POST", $request->getMethod());
         $this->assertEquals('{"configData":{"var":"val"}}', $request->getBody()->readLine());
         $this->assertEquals("test", $request->getHeaders()->get("x-storageapi-token"));
+        $this->assertEquals("runidtest", $request->getHeaders()->get("x-kbc-runid"));
     }
 
     /**
@@ -89,7 +93,8 @@ class ClientTest extends \PHPUnit_Framework_TestCase
     {
         $client = Client::factory(array(
             "token" => "test",
-            "super" => "super"
+            "super" => "super",
+            "runId" => 'runidtest'
         ));
 
         $mock = new MockPlugin();
@@ -118,6 +123,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("POST", $request->getMethod());
         $this->assertEquals('{"config":"1"}', $request->getBody()->readLine());
         $this->assertEquals("test", $request->getHeaders()->get("x-storageapi-token"));
+        $this->assertEquals("runidtest", $request->getHeaders()->get("x-kbc-runid"));
     }
 
 
@@ -127,7 +133,8 @@ class ClientTest extends \PHPUnit_Framework_TestCase
     public function testGetJob()
     {
         $client = Client::factory(array(
-            "token" => 'test'
+            "token" => 'test',
+            "runId" => 'runidtest'
         ));
 
         $mock = new MockPlugin();
@@ -154,6 +161,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("https://syrup.keboola.com/queue/job/123456", $request->getUrl());
         $this->assertEquals("GET", $request->getMethod());
         $this->assertEquals("test", $request->getHeaders()->get("x-storageapi-token"));
+        $this->assertEquals("runidtest", $request->getHeaders()->get("x-kbc-runid"));
     }
 
     /**
@@ -163,7 +171,8 @@ class ClientTest extends \PHPUnit_Framework_TestCase
     {
         $client = Client::factory(array(
             "token" => 'test',
-            "super" => 'docker'
+            "super" => 'docker',
+            "runId" => 'runidtest'
         ));
 
         $mock = new MockPlugin();
@@ -190,6 +199,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("https://syrup.keboola.com/queue/job/123456", $request->getUrl());
         $this->assertEquals("GET", $request->getMethod());
         $this->assertEquals("test", $request->getHeaders()->get("x-storageapi-token"));
+        $this->assertEquals("runidtest", $request->getHeaders()->get("x-kbc-runid"));
     }
 
 
@@ -248,7 +258,6 @@ class ClientTest extends \PHPUnit_Framework_TestCase
      */
     public function testRunJobMaxTries()
     {
-
         $client = Client::factory(array(
             "token" => 'test'
         ));

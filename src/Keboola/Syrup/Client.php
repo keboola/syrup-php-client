@@ -38,9 +38,11 @@ class Client extends \Guzzle\Service\Client
         $config['curl.options'] = array(
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0,
         );
+
         $config['request.options'] = array(
             'headers' => array(
-                'X-StorageApi-Token' => $config->get('token')
+                'X-StorageApi-Token' => $config->get('token'),
+                'X-KBC-RunId' => $config->get('runId')
             )
         );
 
