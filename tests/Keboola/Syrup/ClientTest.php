@@ -250,6 +250,61 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("success", $response["status"]);
     }
 
+    public function testRunAndKillJob()
+    {
+        $client = Client::factory(array(
+            "token" => 'test'
+        ));
+
+        $mock = new MockPlugin();
+
+        $mock->addResponse(new Response(200, array(
+            'Location' => 'https://syrup.keboola.com/test-component/run',
+            'Content-Type' => 'application/json'
+        ), '
+            {
+                "id": 123456,
+                "url": "https://syrup-testing.keboola.com/queue/job/123456",
+                "status": "waiting"
+            }'));
+
+        $mock->addResponse(new Response(200, array(
+            'Location' => 'https://syrup.keboola.com/queue/job/123456',
+            'Content-Type' => 'application/json'
+        ), '
+            {
+                "id": 123456,
+                "status": "processing"
+            }'));
+
+        $mock->addResponse(new Response(200, array(
+            'Location' => 'https://syrup.keboola.com/queue/job/123456',
+            'Content-Type' => 'application/json'
+        ), '
+            {
+                "id": 123456,
+                "status": "terminating"
+            }'));
+
+
+        $mock->addResponse(new Response(200, array(
+            'Location' => 'https://syrup.keboola.com/queue/job/123456',
+            'Content-Type' => 'application/json'
+        ), '
+            {
+                "id": 123456,
+                "status": "terminated"
+            }'));
+
+
+        $client->addSubscriber($mock);
+        $response = $client->runJob("test-component", array("config" => 1));
+        $requests = $mock->getReceivedRequests();
+
+        $this->assertCount(4, $requests);
+        $this->assertEquals("terminated", $response["status"]);
+    }
+
     /**
      * Test max retries exception
      *

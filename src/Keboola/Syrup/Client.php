@@ -15,7 +15,7 @@ class Client extends \Guzzle\Service\Client
 
     protected $maxRetries = 20;
 
-    protected $jobFinishedStates = array("cancelled", "canceled", "success", "error");
+    protected $jobFinishedStates = array("cancelled", "canceled", "success", "error", "terminated");
 
     protected $maxDelay = 300;
 

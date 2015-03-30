@@ -3,6 +3,7 @@ php:
   - 5.3
   - 5.4
   - 5.5
+  - 5.6
   - hhvm
 notifications:
   email: false
@@ -13,7 +14,7 @@ install:
   - composer install --dev --no-scripts
 script:
   - ./vendor/bin/phpcs --standard=psr2 --ignore=vendor -n .
-  - phpunit --coverage-clover build/logs/clover.xml
+  - php ./vendor/bin/phpunit --coverage-clover build/logs/clover.xml
 after_success:
   - ./vendor/bin/test-reporter --stdout > codeclimate.json
   - "curl -X POST -d @codeclimate.json -H 'Content-Type: application/json' -H 'User-Agent: Code Climate (PHP Test Reporter v0.1.1)' https://codeclimate.com/test_reports"
