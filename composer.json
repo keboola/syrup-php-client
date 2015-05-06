@@ -13,6 +13,6 @@
         "squizlabs/php_codesniffer": "2.*"
     },
     "require": {
-        "guzzle/guzzle": "3.8.*"
+        "guzzle/guzzle": "~3.8"
     }
 }
