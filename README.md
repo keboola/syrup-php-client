@@ -57,3 +57,19 @@ $client = new Client([
 $response = $client->runJob("test-component", array("config" => 1));
 ```
 
+Encrypt component and project specific string for a Docker component (calls `docker/test-component/configs/encrypt`)
+
+```php
+require 'vendor/autoload.php';
+
+use Keboola\Syrup\Client,
+
+$client = new Client([
+  'token' => 'YOUR_TOKEN',
+  'runId' => 'CURRENT_RUNID',
+  'super' => 'docker'
+]);
+
+$response = $client->encryptString("test-component", "string", ["path" => "configs"]);
+```
+
