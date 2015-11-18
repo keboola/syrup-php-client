@@ -42,6 +42,34 @@
                     "required": false
                 }
             }
+        },
+        "Encrypt": {
+            "httpMethod": "POST",
+            "uri": "{super}/{component}/{path}/encrypt",
+            "summary": "Encrypt string",
+            "parameters": {
+                "super": {
+                    "location": "uri",
+                    "type": "string",
+                    "required": false
+                },
+                "component": {
+                    "location": "uri",
+                    "type": "string",
+                    "required": true
+                },
+                "path": {
+                    "location": "uri",
+                    "type": "string",
+                    "required": false
+                },
+                "body": {
+                    "location": "body",
+                    "type": "string",
+                    "required": true
+                }
+
+            }
         }
     }
 }

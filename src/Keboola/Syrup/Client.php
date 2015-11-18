@@ -100,6 +100,52 @@ class Client extends \Guzzle\Service\Client
     }
 
     /**
+     *
+     * Encrypt string
+     *
+     * Options array can contain `path` attribute to allow further level nesting, eg.
+     * .../docker/docker-config-encrypt-verify/configs/encrypt
+     *     ^ super ^ component                 ^ path
+     * @param $component
+     * @param $string
+     * @param array $options
+     * @return mixed
+     */
+    public function encryptString($component, $string, $options = [])
+    {
+        $options["component"] = $component;
+        $options["body"] = $string;
+        $command = $this->getCommand('Encrypt', $options);
+        $command->prepare();
+        $command->getRequest()->addHeader("Content-Type", "text/plain");
+        return $command->execute();
+    }
+
+    /**
+     *
+     * Encrypt array
+     *
+     * Options array can contain `path` attribute to allow further level nesting, eg.
+     * .../docker/docker-config-encrypt-verify/configs/encrypt
+     *     ^ super ^ component                 ^ path
+     *
+     * @param $component
+     * @param $array
+     * @param array $options
+     * @return mixed
+     */
+    public function encryptArray($component, $array, $options = [])
+    {
+        $options["component"] = $component;
+        $options["body"] = json_encode($array);
+        $command = $this->getCommand('Encrypt', $options);
+        $command->prepare();
+        $command->getRequest()->addHeader("Content-Type", "application/json");
+        return $command->execute();
+    }
+
+
+    /**
      * @param $component
      * @param array $options
      * @return mixed

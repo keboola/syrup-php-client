@@ -381,4 +381,175 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $client->addSubscriber($mock);
         $client->runJob("test-component", array("config" => 1));
     }
+
+
+    /**
+     * test createJob method with configData parameter
+     */
+    public function testEncryptString()
+    {
+        $client = Client::factory(array(
+            "token" => 'test',
+            "runId" => 'runidtest'
+        ));
+
+        $mock = new MockPlugin();
+
+        $mock->addResponse(
+            new Response(
+                200,
+                array(
+                    'Location' => 'hhttps://syrup.keboola.com/docker/encrypt',
+                    'Content-Type' => 'text/plain'
+                ),
+                'KBC::Encrypted==hgAYFu8FiztDlUOJ5Bg7cxoBKwOeNTONrv8Be/vsWMif3hW9dl8uunwuNvD4+c6ME0GHHjVCwRkgFvn3lD94PQ=='
+            )
+        );
+
+        $client->addSubscriber($mock);
+        $client->encryptString("docker", "test");
+        $requests = $mock->getReceivedRequests();
+
+        $this->assertCount(1, $requests);
+
+        /**
+         * @var $request \Guzzle\Http\Message\EntityEnclosingRequest
+         */
+        $request = $requests[0];
+        $this->assertEquals("https://syrup.keboola.com/docker/encrypt", $request->getUrl());
+        $this->assertEquals("POST", $request->getMethod());
+        $this->assertEquals("test", $request->getHeaders()->get("x-storageapi-token"));
+        $this->assertEquals("text/plain", $request->getHeaders()->get("content-type"));
+        $this->assertEquals("runidtest", $request->getHeaders()->get("x-kbc-runid"));
+        $this->assertEquals('test', $request->getBody());
+    }
+
+    /**
+     * test createJob method with configData parameter
+     */
+    public function testEncryptData()
+    {
+        $client = Client::factory(array(
+            "token" => 'test',
+            "runId" => 'runidtest'
+        ));
+
+        $mock = new MockPlugin();
+
+        $mock->addResponse(
+            new Response(
+                200,
+                array(
+                    'Location' => 'https://syrup.keboola.com/docker/encrypt',
+                    'Content-Type' => 'application/json'
+                ),
+                '{
+  "plain": "test",
+  "#encrypted": "KBC::Encrypted==XbMxAbF29V+pKS2kG8OZkMdFjyAFc2bO+PUSE1q8qzYXPhGGLSzY+m4kTtJ5264mapanmlj1Gm95rvJMC+I0XQ=="
+}'
+            )
+        );
+
+        $client->addSubscriber($mock);
+        $client->encryptArray("docker", array("plain" => "test", "#encrypted" => "test"));
+        $requests = $mock->getReceivedRequests();
+
+        $this->assertCount(1, $requests);
+
+        /**
+         * @var $request \Guzzle\Http\Message\EntityEnclosingRequest
+         */
+        $request = $requests[0];
+        $this->assertEquals("https://syrup.keboola.com/docker/encrypt", $request->getUrl());
+        $this->assertEquals("POST", $request->getMethod());
+        $this->assertEquals("test", $request->getHeaders()->get("x-storageapi-token"));
+        $this->assertEquals("application/json", $request->getHeaders()->get("content-type"));
+        $this->assertEquals("runidtest", $request->getHeaders()->get("x-kbc-runid"));
+        $this->assertEquals('{"plain":"test","#encrypted":"test"}', $request->getBody()->read(1000));
+    }
+
+    /**
+     * test createJob method with configData parameter
+     */
+    public function testEncryptStringWithSuper()
+    {
+        $client = Client::factory(array(
+            "token" => 'test',
+            "runId" => 'runidtest',
+            "super" => 'docker'
+        ));
+
+        $mock = new MockPlugin();
+
+        $mock->addResponse(
+            new Response(
+                200,
+                array(
+                    'Location' => 'https://syrup.keboola.com/docker/demo/encrypt',
+                    'Content-Type' => 'text/plain'
+                ),
+                'KBC::ComponentEncrypted==U6pdFDMt/Di7cc1ySnWkSkUi1UGpmOnDMxb6+VXlZulITBOyz5X1UciP1IZkFHTN0Ckw1ERBcK8bjRN9Vz/Q7lts2ig8ENjd5oO7ue1HqWj00Ea0/xNZvFlh0f5TOqY2'
+            )
+        );
+
+        $client->addSubscriber($mock);
+        $client->encryptString("demo", "test");
+        $requests = $mock->getReceivedRequests();
+
+        $this->assertCount(1, $requests);
+
+        /**
+         * @var $request \Guzzle\Http\Message\EntityEnclosingRequest
+         */
+        $request = $requests[0];
+        $this->assertEquals("https://syrup.keboola.com/docker/demo/encrypt", $request->getUrl());
+        $this->assertEquals("POST", $request->getMethod());
+        $this->assertEquals("test", $request->getHeaders()->get("x-storageapi-token"));
+        $this->assertEquals("text/plain", $request->getHeaders()->get("content-type"));
+        $this->assertEquals("runidtest", $request->getHeaders()->get("x-kbc-runid"));
+        $this->assertEquals('test', $request->getBody());
+    }
+
+
+    /**
+     * test createJob method with configData parameter
+     */
+    public function testEncryptStringWithSuperAndSubPath()
+    {
+        $client = Client::factory(array(
+            "token" => 'test',
+            "runId" => 'runidtest',
+            "super" => 'docker'
+        ));
+
+        $mock = new MockPlugin();
+
+        $mock->addResponse(
+            new Response(
+                200,
+                array(
+                    'Location' => 'https://syrup.keboola.com/docker/demo/encrypt',
+                    'Content-Type' => 'text/plain'
+                ),
+                'KBC::ComponentProjectEncrypted==Z05QovYpXTZN/DeHyXlarISB3Ca7Zs/ORW6fqs5EsIZaq7CZuHx9tAZFIxQHjd4HS15FuIcHC2Ko/q70MfH94t9TF7chg6zRDK7rOugSUpIvTXRelGHTkLzWkwiwd419'
+            )
+        );
+
+        $client->addSubscriber($mock);
+        $client->encryptString("demo", "test", ["path" => "configs"]);
+        $requests = $mock->getReceivedRequests();
+
+        $this->assertCount(1, $requests);
+
+        /**
+         * @var $request \Guzzle\Http\Message\EntityEnclosingRequest
+         */
+        $request = $requests[0];
+        $this->assertEquals("https://syrup.keboola.com/docker/demo/configs/encrypt", $request->getUrl());
+        $this->assertEquals("POST", $request->getMethod());
+        $this->assertEquals("test", $request->getHeaders()->get("x-storageapi-token"));
+        $this->assertEquals("text/plain", $request->getHeaders()->get("content-type"));
+        $this->assertEquals("runidtest", $request->getHeaders()->get("x-kbc-runid"));
+        $this->assertEquals('test', $request->getBody());
+    }
 }
