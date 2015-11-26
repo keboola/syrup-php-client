@@ -17,7 +17,7 @@ class Client extends \Guzzle\Service\Client
 
     protected $jobFinishedStates = array("cancelled", "canceled", "success", "error", "terminated");
 
-    protected $maxDelay = 300;
+    protected $maxDelay = 10;
 
     /**
      * @var string parent component, eg https://syrup.keboola.com/docker
