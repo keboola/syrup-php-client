@@ -306,57 +306,6 @@ class ClientTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Test max retries exception
-     *
-     * @expectedException \Keboola\Syrup\ClientException
-     * @expectedExceptionMessage Too many retries.
-     */
-    public function testRunJobMaxTries()
-    {
-        $client = Client::factory(array(
-            "token" => 'test'
-        ));
-
-        $reflection = new \ReflectionClass($client);
-        $property = $reflection->getProperty('maxRetries');
-        $property->setAccessible(true);
-        $property->setValue($client, 1);
-
-        $mock = new MockPlugin();
-
-        $mock->addResponse(new Response(200, array(
-            'Location' => 'https://syrup.keboola.com/test-component/run',
-            'Content-Type' => 'application/json'
-        ), '
-            {
-                "id": 123456,
-                "url": "https://syrup-testing.keboola.com/queue/job/123456",
-                "status": "waiting"
-            }'));
-
-        $mock->addResponse(new Response(200, array(
-            'Location' => 'https://syrup.keboola.com/queue/job/123456',
-            'Content-Type' => 'application/json'
-        ), '
-            {
-                "id": 123456,
-                "status": "processing"
-            }'));
-
-        $mock->addResponse(new Response(200, array(
-            'Location' => 'https://syrup.keboola.com/queue/job/123456',
-            'Content-Type' => 'application/json'
-        ), '
-            {
-                "id": 123456,
-                "status": "processing"
-            }'));
-
-        $client->addSubscriber($mock);
-        $client->runJob("test-component", array("config" => 1));
-    }
-
-    /**
      * Test invalid response from api
      *
      * @expectedException \Keboola\Syrup\ClientException

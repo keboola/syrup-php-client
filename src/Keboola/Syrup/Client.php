@@ -13,8 +13,6 @@ class Client extends \Guzzle\Service\Client
 {
     const DEFAULT_API_URL = 'https://syrup.keboola.com';
 
-    protected $maxRetries = 20;
-
     protected $jobFinishedStates = array("cancelled", "canceled", "success", "error", "terminated");
 
     protected $maxDelay = 10;
@@ -52,10 +50,6 @@ class Client extends \Guzzle\Service\Client
         $description = ServiceDescription::factory(__DIR__ . '/service.json');
         $client->setDescription($description);
         $client->setBaseUrl($config->get('url'));
-
-        // Setup exponential backoff
-        $backoffPlugin = BackoffPlugin::getExponentialBackoff();
-        $client->addSubscriber($backoffPlugin);
 
         if ($config->get("super")) {
             $client->super = $config->get("super");
@@ -166,9 +160,6 @@ class Client extends \Guzzle\Service\Client
                 $finished = true;
             }
             $attempt++;
-            if ($attempt > $this->maxRetries && !$finished) {
-                throw new ClientException("Too many retries.");
-            }
             sleep(min(pow(2, $attempt), $this->maxDelay));
         }
         return $job;
