@@ -51,6 +51,10 @@ class Client extends \Guzzle\Service\Client
         $client->setDescription($description);
         $client->setBaseUrl($config->get('url'));
 
+        // Setup exponential backoff
+        $backoffPlugin = BackoffPlugin::getExponentialBackoff();
+        $client->addSubscriber($backoffPlugin);
+
         if ($config->get("super")) {
             $client->super = $config->get("super");
         }
