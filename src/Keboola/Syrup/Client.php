@@ -1,101 +1,252 @@
 <?php
+
 namespace Keboola\Syrup;
 
-use Guzzle\Common\Collection;
-use Guzzle\Plugin\Backoff\BackoffPlugin;
-use Guzzle\Service\Description\ServiceDescription;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\MessageFormatter;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\Uri;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Class Client
  * @package Keboola\Orchestrator
  */
-class Client extends \Guzzle\Service\Client
+class Client extends \GuzzleHttp\Client
 {
     const DEFAULT_API_URL = 'https://syrup.keboola.com';
+    const DEFAULT_USER_AGENT = 'Keboola Syrup PHP Client';
+    const DEFAULT_BACKOFF_RETRIES = 11;
 
-    protected $jobFinishedStates = array("cancelled", "canceled", "success", "error", "terminated");
+    protected $jobFinishedStates = ["cancelled", "canceled", "success", "error", "terminated"];
 
+    /**
+     * @var int Maximum delay between queries for job state
+     */
     protected $maxDelay = 10;
 
     /**
-     * @var string parent component, eg https://syrup.keboola.com/docker
+     * @var string Name of parent component
      */
     protected $super = '';
 
+    /*
+     * @var string Actual base request URL.
+     */
+    private $url;
+
+
+    private static function createDefaultDecider($maxRetries = 3)
+    {
+        return function (
+            $retries,
+            RequestInterface $request,
+            ResponseInterface $response = null,
+            $error = null
+        ) use ($maxRetries) {
+            if ($retries >= $maxRetries) {
+                return false;
+            } elseif ($response && $response->getStatusCode() > 499) {
+                return true;
+            } elseif ($error) {
+                // TODO: tohle je mozna ta chyba
+                return true;
+            } else {
+                return false;
+            }
+        };
+    }
+
+
     /**
-     * @param array $config
+     * Create a client instance
+     *
+     * @param array $config Client configuration settings:
+     *     - token: (required) Storage API token.
+     *     - runId: (optional) Storage API runId.
+     *     - url: (optional) Syrup API URL to override the default (DEFAULT_API_URL).
+     *     - super: (optional) Name of parent component if any.
+     *     - userAgent: (optional) Custom user agent (appended to the default).
+     *     - backoffMaxTries: (optional) Number of retries in case of backend error.
+     *     - logger: (optional) instance of Psr\Log\LoggerInterface.
+     *     - handler: (optional) instance of GuzzleHttp\HandlerStack.
      * @return Client
      */
-    public static function factory($config = array())
+    public static function factory(array $config = [])
     {
-        $default = array(
-            'url' => static::DEFAULT_API_URL,
-        );
-        $required = array('token');
-        $config = Collection::fromConfig($config, $default, $required);
-        $config['curl.options'] = array(
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0,
-        );
-
-        $config['request.options'] = array(
-            'headers' => array(
-                'X-StorageApi-Token' => $config->get('token'),
-                'X-KBC-RunId' => $config->get('runId')
-            )
-        );
-
-        $client = new static($config->get('url'), $config);
-
-        // Attach a service description to the client
-        $description = ServiceDescription::factory(__DIR__ . '/service.json');
-        $client->setDescription($description);
-        $client->setBaseUrl($config->get('url'));
-
-        // Setup exponential backoff
-        $backoffPlugin = BackoffPlugin::getExponentialBackoff();
-        $client->addSubscriber($backoffPlugin);
-
-        if ($config->get("super")) {
-            $client->super = $config->get("super");
+        if (empty($config['token'])) {
+            throw new \InvalidArgumentException('Storage API token must be set.');
+        } else {
+            $token = $config['token'];
+        }
+        $apiUrl = self::DEFAULT_API_URL;
+        if (!empty($config['url'])) {
+            $apiUrl = $config['url'];
+        }
+        $runId = '';
+        if (!empty($config['runId'])) {
+            $runId = $config['runId'];
+        }
+        $userAgent = self::DEFAULT_USER_AGENT;
+        if (!empty($config['userAgent'])) {
+            $userAgent .= ' - ' . $config['userAgent'];
+        }
+        $maxRetries = self::DEFAULT_BACKOFF_RETRIES;
+        if (!empty($config['backoffMaxTries'])) {
+            $maxRetries = $config['backoffMaxTries'];
         }
 
+        // Initialize handlers (start with those supplied in constructor)
+        if (isset($config['handler']) && is_a($config['handler'], HandlerStack::class)) {
+            $handlerStack = HandlerStack::create($config['handler']);
+        } else {
+            $handlerStack = HandlerStack::create();
+
+        }
+        // Set exponential backoff for cases where job detail returns error
+        $handlerStack->push(Middleware::retry(
+            self::createDefaultDecider($maxRetries),
+            function () {
+                return function ($retries) {
+                    return (int)pow(2, $retries - 1) * 1000;
+                };
+            }
+        ));
+        // Set handler to set default headers
+        $handlerStack->push(Middleware::mapRequest(
+            function (RequestInterface $request) use ($token, $runId, $userAgent) {
+                $req = $request->withHeader('X-StorageApi-Token', $token)
+                    ->withHeader('User-Agent', $userAgent)
+                    ->withHeader('curl', [CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0]);
+                if (!$req->hasHeader('content-type')) {
+                    $req = $req->withHeader('Content-type', 'application/json');
+                }
+                if ($runId) {
+                    $req = $req->withHeader('X-KBC-RunId', $runId);
+                }
+                return $req;
+            }
+        ));
+
+        // Set client logger
+        if (isset($config['logger']) && is_a($config['logger'], LoggerInterface::class)) {
+            $handlerStack->push(Middleware::log(
+                $config['logger'],
+                new MessageFormatter(
+                    "{hostname} {req_header_User-Agent} - [{ts}] \"{method} {resource} {protocol}/{version}\" " .
+                    "{code} {res_header_Content-Length}"
+                )
+            ));
+        }
+
+        // finally create the instance
+        $client = new static(['base_url' => $apiUrl, 'handler' => $handlerStack]);
+        $client->setUrl($apiUrl);
+        if (!empty($config['super'])) {
+            $client->setSuper($config['super']);
+        }
         return $client;
     }
 
+
     /**
-     * Create a new async job
+     * Set parent component.
+     * @param string $super Name of the parent component.
+     */
+    protected function setSuper($super)
+    {
+        $this->super = $super;
+    }
+
+
+    /**
+     * Set request URL
+     * @param string $url Base url for requests.
+     */
+    protected function setUrl($url)
+    {
+        $this->url = $url;
+    }
+
+
+    /**
+     * Decode a JSON response.
+     * @param Response $response
+     * @return array Parsed response.
+     * @throws ClientException In case response cannot be read properly.
+     */
+    private function decodeResponse(Response $response)
+    {
+        $data = json_decode($response->getBody()->read($response->getBody()->getSize()), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new ClientException('Unable to parse response body into JSON: ' . json_last_error());
+        }
+
+        return $data === null ? array() : $data;
+    }
+
+
+    /**
+     * Create a new asynchronous job.
      *
-     * Available options are
-     *  - config - configuration id
-     *  - configData - configuration data
-     *
-     * @param $component
-     * @param array $options
-     * @return mixed
+     * @param string $component Component name
+     * @param array $options Available options are:
+     *      - config: configuration id.
+     *      - configData: configuration data.
+     * @return array Response data with job status.
+     * @throws ClientException
      */
     public function createJob($component, $options = array())
     {
-        $params = $options;
-        $params["component"] = $component;
-        $params["super"] = $this->super;
-        $command = $this->getCommand('CreateJob', $params);
-        return $command->execute();
+        $uri = new Uri($this->url);
+        if ($this->super) {
+            $uri = $uri->withPath("{$this->super}/{$component}/run");
+        } else {
+            $uri = $uri->withPath("{$component}/run");
+        }
+        $body = [];
+        if (isset($options['config'])) {
+            $body['config'] = $options['config'];
+        }
+        if (isset($options['configData'])) {
+            $body['configData'] = $options['configData'];
+        }
+
+        try {
+            $request = new Request('POST', $uri, [], json_encode($body));
+            $response = $this->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $this->decodeResponse($response);
     }
 
+
     /**
+     * Get asynchronous job status (waiting, processing, etc.).
      *
-     * Get async job status
-     *
-     * @param $job
-     * @return mixed
+     * @param int|string $job Job Id.
+     * @return array Response data with job status.
+     * @throws ClientException
      */
     public function getJob($job)
     {
-        $params = array(
-            "job" => $job
-        );
-        return $this->getCommand('GetJob', $params)->execute();
+        $uri = new Uri($this->url);
+        $uri = $uri->withPath("queue/job/{$job}");
+        try {
+            $request = new Request('GET', $uri);
+            $response = $this->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $this->decodeResponse($response);
     }
+
 
     /**
      *
@@ -104,52 +255,82 @@ class Client extends \Guzzle\Service\Client
      * Options array can contain `path` attribute to allow further level nesting, eg.
      * .../docker/docker-config-encrypt-verify/configs/encrypt
      *     ^ super ^ component                 ^ path
-     * @param $component
-     * @param $string
-     * @param array $options
-     * @return mixed
+     * @param string $component Name of the component.
+     * @param string $string Arbitrary string.
+     * @param array $options Array with options:
+     *      - path: additional nesting for request (see above)
+     * @return string Encrypted string.
+     * @throws ClientException
      */
-    public function encryptString($component, $string, $options = [])
+    public function encryptString($component, $string, array $options = [])
     {
-        $options["component"] = $component;
-        $options["body"] = $string;
-        $command = $this->getCommand('Encrypt', $options);
-        $command->prepare();
-        $command->getRequest()->addHeader("Content-Type", "text/plain");
-        return $command->execute();
+        if ($this->super) {
+            $uriParts[] = $this->super;
+        }
+        $uriParts[] = $component;
+        if (!empty($options['path'])) {
+            $uriParts[] = $options['path'];
+        }
+        $uriParts[] = 'encrypt';
+        $uri = new Uri($this->url);
+        $uri = $uri->withPath(implode('/', $uriParts));
+        try {
+            $request = new Request('POST', $uri, ["Content-Type" => "text/plain"], $string);
+            $response = $this->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $response->getBody()->read($response->getBody()->getSize());
     }
 
+
     /**
-     *
-     * Encrypt array
+     * Encrypt array.
      *
      * Options array can contain `path` attribute to allow further level nesting, eg.
      * .../docker/docker-config-encrypt-verify/configs/encrypt
      *     ^ super ^ component                 ^ path
      *
-     * @param $component
-     * @param $array
-     * @param array $options
-     * @return mixed
+     * @param string $component Name of the component.
+     * @param array $array Arbitrary array with data.
+     * @param array $options Array with options:
+     *      - path: additional nesting for request (see above)
+     * @return array Array with encrypted values.
+     * @throws ClientException
      */
-    public function encryptArray($component, $array, $options = [])
+    public function encryptArray($component, array $array, array $options = [])
     {
-        $options["component"] = $component;
-        $options["body"] = json_encode($array);
-        $command = $this->getCommand('Encrypt', $options);
-        $command->prepare();
-        $command->getRequest()->addHeader("Content-Type", "application/json");
-        return $command->execute();
+        if ($this->super) {
+            $uriParts[] = $this->super;
+        }
+        $uriParts[] = $component;
+        if (!empty($options['path'])) {
+            $uriParts[] = $options['path'];
+        }
+        $uriParts[] = 'encrypt';
+        $uri = new Uri($this->url);
+        $uri = $uri->withPath(implode('/', $uriParts));
+        try {
+            $request = new Request('POST', $uri, ['Content-type' => 'application/json',], json_encode($array));
+            $response = $this->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $this->decodeResponse($response);
     }
 
 
     /**
-     * @param $component
-     * @param array $options
-     * @return mixed
-     * @throws ClientException
+     * Run a syrup job and wait for the result.
+     *
+     * @param string $component Component name.
+     * @param array $options Available options are:
+     *      - config: configuration id.
+     *      - configData: configuration data.
+     * @return array Response data with job result.
+     * @throws ClientException In case creation or waiting for the job failed.
      */
-    public function runJob($component, $options = array())
+    public function runJob($component, array $options = [])
     {
         $response = $this->createJob($component, $options);
         if (!isset($response["id"])) {
