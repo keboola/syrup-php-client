@@ -686,19 +686,19 @@ class ClientTest extends \PHPUnit_Framework_TestCase
             $client->getJob('123');
             $this->fail("Invalid request must raise exception.");
         } catch (ClientException $e) {
-            $this->assertContains('Could not resolve host', $e->getMessage());
+            $this->assertContains('resolve host', $e->getMessage());
         }
         try {
             $client->encryptArray('demo', ['#encrypt' => 'test']);
             $this->fail("Invalid request must raise exception.");
         } catch (ClientException $e) {
-            $this->assertContains('Could not resolve host', $e->getMessage());
+            $this->assertContains('resolve host', $e->getMessage());
         }
         try {
             $client->encryptString('demo', 'test');
             $this->fail("Invalid request must raise exception.");
         } catch (ClientException $e) {
-            $this->assertContains('Could not resolve host', $e->getMessage());
+            $this->assertContains('resolve host', $e->getMessage());
         }
     }
 
