@@ -54,7 +54,6 @@ class Client extends \GuzzleHttp\Client
             } elseif ($response && $response->getStatusCode() > 499) {
                 return true;
             } elseif ($error) {
-                // TODO: tohle je mozna ta chyba
                 return true;
             } else {
                 return false;
@@ -110,12 +109,7 @@ class Client extends \GuzzleHttp\Client
         }
         // Set exponential backoff for cases where job detail returns error
         $handlerStack->push(Middleware::retry(
-            self::createDefaultDecider($maxRetries),
-            function () {
-                return function ($retries) {
-                    return (int)pow(2, $retries - 1) * 1000;
-                };
-            }
+            self::createDefaultDecider($maxRetries)
         ));
         // Set handler to set default headers
         $handlerStack->push(Middleware::mapRequest(
