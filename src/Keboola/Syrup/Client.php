@@ -115,8 +115,7 @@ class Client extends \GuzzleHttp\Client
         $handlerStack->push(Middleware::mapRequest(
             function (RequestInterface $request) use ($token, $runId, $userAgent) {
                 $req = $request->withHeader('X-StorageApi-Token', $token)
-                    ->withHeader('User-Agent', $userAgent)
-                    ->withHeader('curl', [CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0]);
+                    ->withHeader('User-Agent', $userAgent);
                 if (!$req->hasHeader('content-type')) {
                     $req = $req->withHeader('Content-type', 'application/json');
                 }
