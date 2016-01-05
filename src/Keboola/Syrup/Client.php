@@ -74,9 +74,10 @@ class Client extends \GuzzleHttp\Client
      *     - backoffMaxTries: (optional) Number of retries in case of backend error.
      *     - logger: (optional) instance of Psr\Log\LoggerInterface.
      *     - handler: (optional) instance of GuzzleHttp\HandlerStack.
+     * @param callable $delay Optional custom delay method to apply (default is exponential)
      * @return Client
      */
-    public static function factory(array $config = [])
+    public static function factory(array $config = [], callable $delay = null)
     {
         if (empty($config['token'])) {
             throw new \InvalidArgumentException('Storage API token must be set.');
@@ -109,7 +110,8 @@ class Client extends \GuzzleHttp\Client
         }
         // Set exponential backoff for cases where job detail returns error
         $handlerStack->push(Middleware::retry(
-            self::createDefaultDecider($maxRetries)
+            self::createDefaultDecider($maxRetries),
+            $delay
         ));
         // Set handler to set default headers
         $handlerStack->push(Middleware::mapRequest(
