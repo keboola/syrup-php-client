@@ -21,7 +21,7 @@ mv ./composer.phar ~/bin/composer # or /usr/local/bin/composer
 {
     "require": {
         "php" : ">=5.4.0",
-        "keboola/syrup-php-client": "0.1.*"
+        "keboola/syrup-php-client": "2.0.*"
     }
 }
 ```
