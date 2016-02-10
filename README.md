@@ -49,7 +49,7 @@ require 'vendor/autoload.php';
 
 use Keboola\Syrup\Client,
 
-$client = new Client([
+$client = Client::factory([
   'token' => 'YOUR_TOKEN',
   'runId' => 'CURRENT_RUNID'
 ]);
@@ -64,7 +64,7 @@ require 'vendor/autoload.php';
 
 use Keboola\Syrup\Client,
 
-$client = new Client([
+$client = Client::factory([
   'token' => 'YOUR_TOKEN',
   'runId' => 'CURRENT_RUNID',
   'super' => 'docker'
