@@ -38,7 +38,7 @@ class Client extends \GuzzleHttp\Client
     /*
      * @var string Actual base request URL.
      */
-    private $url;
+    protected $url;
 
 
     private static function createDefaultDecider($maxRetries = 3)
@@ -106,8 +106,8 @@ class Client extends \GuzzleHttp\Client
             $handlerStack = HandlerStack::create($config['handler']);
         } else {
             $handlerStack = HandlerStack::create();
-
         }
+
         // Set exponential backoff for cases where job detail returns error
         $handlerStack->push(Middleware::retry(
             self::createDefaultDecider($maxRetries),
@@ -175,7 +175,7 @@ class Client extends \GuzzleHttp\Client
      * @return array Parsed response.
      * @throws ClientException In case response cannot be read properly.
      */
-    private function decodeResponse(Response $response)
+    protected function decodeResponse(Response $response)
     {
         $data = json_decode($response->getBody()->read($response->getBody()->getSize()), true);
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -229,10 +229,15 @@ class Client extends \GuzzleHttp\Client
      * @return array Response data with job status.
      * @throws ClientException
      */
-    public function getJob($job)
+    public function getJob($job, $url = null)
     {
-        $uri = new Uri($this->url);
-        $uri = $uri->withPath("queue/job/{$job}");
+        if ($url) {
+            $uri = $url;
+        } else {
+            $uri = new Uri($this->url);
+            $uri = $uri->withPath("queue/job/{$job}");
+        }
+
         try {
             $request = new Request('GET', $uri);
             $response = $this->send($request);
@@ -328,14 +333,14 @@ class Client extends \GuzzleHttp\Client
     public function runJob($component, array $options = [])
     {
         $response = $this->createJob($component, $options);
-        if (!isset($response["id"])) {
+        if (!isset($response["url"])) {
             throw new ClientException("Invalid response.");
         }
         $finished = false;
         $attempt = 0;
         $job = array();
         while (!$finished) {
-            $job = $this->getJob($response["id"]);
+            $job = $this->getJob($response["id"], $response['url']);
             if (in_array($job["status"], $this->jobFinishedStates)) {
                 $finished = true;
             }
