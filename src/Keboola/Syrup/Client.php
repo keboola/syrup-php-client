@@ -106,8 +106,8 @@ class Client extends \GuzzleHttp\Client
             $handlerStack = HandlerStack::create($config['handler']);
         } else {
             $handlerStack = HandlerStack::create();
-
         }
+
         // Set exponential backoff for cases where job detail returns error
         $handlerStack->push(Middleware::retry(
             self::createDefaultDecider($maxRetries),
@@ -229,7 +229,7 @@ class Client extends \GuzzleHttp\Client
      * @return array Response data with job status.
      * @throws ClientException
      */
-    public function getJob($job, $url=null)
+    public function getJob($job, $url = null)
     {
         if ($url) {
             $uri = $url;
