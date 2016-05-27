@@ -79,9 +79,8 @@ class Client extends \GuzzleHttp\Client
      */
     public static function factory(array $config = [], callable $delay = null)
     {
-        if (empty($config['token'])) {
-            throw new \InvalidArgumentException('Storage API token must be set.');
-        } else {
+        $token = '';
+        if (!empty($config['token'])) {
             $token = $config['token'];
         }
         $apiUrl = self::DEFAULT_API_URL;
@@ -116,8 +115,10 @@ class Client extends \GuzzleHttp\Client
         // Set handler to set default headers
         $handlerStack->push(Middleware::mapRequest(
             function (RequestInterface $request) use ($token, $runId, $userAgent) {
-                $req = $request->withHeader('X-StorageApi-Token', $token)
-                    ->withHeader('User-Agent', $userAgent);
+                $req = $request->withHeader('User-Agent', $userAgent);
+                if ($token) {
+                    $req = $req->withHeader('X-StorageApi-Token', $token);
+                }
                 if (!$req->hasHeader('content-type')) {
                     $req = $req->withHeader('Content-type', 'application/json');
                 }

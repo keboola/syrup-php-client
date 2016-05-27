@@ -3,3 +3,5 @@ vendor
 build
 composer.phar
 /composer.lock
+.kdev4
+*.kdev4
