@@ -9,6 +9,7 @@ use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\Uri;
+use GuzzleHttp\Client as GuzzleClient;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -17,7 +18,7 @@ use Psr\Log\LoggerInterface;
  * Class Client
  * @package Keboola\Orchestrator
  */
-class Client extends \GuzzleHttp\Client
+class Client
 {
     const DEFAULT_API_URL = 'https://syrup.keboola.com';
     const DEFAULT_USER_AGENT = 'Keboola Syrup PHP Client';
@@ -40,6 +41,10 @@ class Client extends \GuzzleHttp\Client
      */
     private $url;
 
+    /**
+     * GuzzleClient
+     */
+    protected $guzzle;
 
     private static function createDefaultDecider($maxRetries = 3)
     {
@@ -141,12 +146,23 @@ class Client extends \GuzzleHttp\Client
         }
 
         // finally create the instance
-        $client = new static(['base_url' => $apiUrl, 'handler' => $handlerStack]);
+        $guzzle = new GuzzleClient(['base_url' => $apiUrl, 'handler' => $handlerStack]);
+        $client = new static($guzzle);
         $client->setUrl($apiUrl);
         if (!empty($config['super'])) {
             $client->setSuper($config['super']);
         }
         return $client;
+    }
+
+    public function __construct(GuzzleClient $client)
+    {
+        $this->guzzle = $client;
+    }
+
+    public function getGuzzle()
+    {
+        return $this->guzzle;
     }
 
 
@@ -215,7 +231,7 @@ class Client extends \GuzzleHttp\Client
 
         try {
             $request = new Request('POST', $uri, [], json_encode($body));
-            $response = $this->send($request);
+            $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
         }
@@ -236,7 +252,7 @@ class Client extends \GuzzleHttp\Client
         $uri = $uri->withPath("queue/job/{$job}");
         try {
             $request = new Request('GET', $uri);
-            $response = $this->send($request);
+            $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
         }
@@ -272,7 +288,7 @@ class Client extends \GuzzleHttp\Client
         $uri = $uri->withPath(implode('/', $uriParts));
         try {
             $request = new Request('POST', $uri, ["Content-Type" => "text/plain"], $string);
-            $response = $this->send($request);
+            $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
         }
@@ -308,7 +324,7 @@ class Client extends \GuzzleHttp\Client
         $uri = $uri->withPath(implode('/', $uriParts));
         try {
             $request = new Request('POST', $uri, ['Content-type' => 'application/json',], json_encode($array));
-            $response = $this->send($request);
+            $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
         }
