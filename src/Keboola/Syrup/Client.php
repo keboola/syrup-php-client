@@ -110,7 +110,6 @@ class Client
             $handlerStack = HandlerStack::create($config['handler']);
         } else {
             $handlerStack = HandlerStack::create();
-
         }
         // Set exponential backoff for cases where job detail returns error
         $handlerStack->push(Middleware::retry(
