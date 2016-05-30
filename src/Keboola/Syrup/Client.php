@@ -145,8 +145,8 @@ class Client
         $userAgent,
         $maxRetries,
         array $config = [],
-        callable $delay = null)
-    {
+        callable $delay = null
+    ) {
         // Initialize handlers (start with those supplied in constructor)
         if (isset($config['handler']) && $config['handler'] instanceof HandlerStack) {
             $handlerStack = HandlerStack::create($config['handler']);
