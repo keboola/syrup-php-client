@@ -702,20 +702,41 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-
-    public function testToken()
+    /**
+     * @dataProvider tokenProvider
+     */
+    public function testToken($expected, $options)
     {
-        try {
-            Client::factory([
-                'runId' => 'runIdTest',
-                'super' => 'docker',
-            ]);
-            $this->fail("Empty token must raise exception.");
-        } catch (\InvalidArgumentException $e) {
-            $this->assertContains(' token must be set', $e->getMessage());
-        }
+        $mock = new MockHandler([
+            new Response(
+                200,
+                ['Content-Type' => 'text/plain'],
+                'KBC::Encrypted==hgAYFu8FiztDlUOJ5Bg7cxoBKwOeNTONrv8Be/vsWMif3hW9dl8uunwuNvD4+c6ME0GHHjVCwRkgFvn3lD94PQ=='
+            )
+        ]);
+
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $defaults = array_merge(['handler' => $stack], $options);
+        $client = Client::factory($defaults);
+        $client->encryptString("docker", "test");
+
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals($expected, $request->hasHeader("x-storageapi-token"));
     }
 
+    public function tokenProvider()
+    {
+        return [
+            [true, ['token' => '1234']],
+            [false, []]
+        ];
+    }
 
     public function testLogger()
     {

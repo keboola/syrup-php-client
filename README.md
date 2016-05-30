@@ -10,7 +10,7 @@ Library is available as composer package.
 To start using composer in your project follow these steps:
 
 **Install composer**
-  
+
 ```bash
 curl -s http://getcomposer.org/installer | php
 mv ./composer.phar ~/bin/composer # or /usr/local/bin/composer
@@ -49,7 +49,7 @@ require 'vendor/autoload.php';
 
 use Keboola\Syrup\Client,
 
-$client = Client::factory([
+$client = new Client([
   'token' => 'YOUR_TOKEN',
   'runId' => 'CURRENT_RUNID'
 ]);
@@ -64,7 +64,7 @@ require 'vendor/autoload.php';
 
 use Keboola\Syrup\Client,
 
-$client = Client::factory([
+$client = new Client([
   'token' => 'YOUR_TOKEN',
   'runId' => 'CURRENT_RUNID',
   'super' => 'docker'

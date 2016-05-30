@@ -9,6 +9,7 @@ use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\Uri;
+use GuzzleHttp\Client as GuzzleClient;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -17,7 +18,7 @@ use Psr\Log\LoggerInterface;
  * Class Client
  * @package Keboola\Orchestrator
  */
-class Client extends \GuzzleHttp\Client
+class Client
 {
     const DEFAULT_API_URL = 'https://syrup.keboola.com';
     const DEFAULT_USER_AGENT = 'Keboola Syrup PHP Client';
@@ -40,6 +41,10 @@ class Client extends \GuzzleHttp\Client
      */
     private $url;
 
+    /**
+     * GuzzleClient
+     */
+    protected $guzzle;
 
     private static function createDefaultDecider($maxRetries = 3)
     {
@@ -61,12 +66,32 @@ class Client extends \GuzzleHttp\Client
         };
     }
 
+    /**
+     * Create a client instance
+     *
+     * @param array $config Client configuration settings:
+     *     - token: (optional) Storage API token.
+     *     - runId: (optional) Storage API runId.
+     *     - url: (optional) Syrup API URL to override the default (DEFAULT_API_URL).
+     *     - super: (optional) Name of parent component if any.
+     *     - userAgent: (optional) Custom user agent (appended to the default).
+     *     - backoffMaxTries: (optional) Number of retries in case of backend error.
+     *     - logger: (optional) instance of Psr\Log\LoggerInterface.
+     *     - handler: (optional) instance of GuzzleHttp\HandlerStack.
+     * @param callable $delay Optional custom delay method to apply (default is exponential)
+     * @return Client
+     * @deprecated
+     */
+    public static function factory(array $config = [], callable $delay = null)
+    {
+        return new self($config, $delay);
+    }
 
     /**
      * Create a client instance
      *
      * @param array $config Client configuration settings:
-     *     - token: (required) Storage API token.
+     *     - token: (optional) Storage API token.
      *     - runId: (optional) Storage API runId.
      *     - url: (optional) Syrup API URL to override the default (DEFAULT_API_URL).
      *     - super: (optional) Name of parent component if any.
@@ -77,11 +102,10 @@ class Client extends \GuzzleHttp\Client
      * @param callable $delay Optional custom delay method to apply (default is exponential)
      * @return Client
      */
-    public static function factory(array $config = [], callable $delay = null)
+    public function __construct(array $config = [], callable $delay = null)
     {
-        if (empty($config['token'])) {
-            throw new \InvalidArgumentException('Storage API token must be set.');
-        } else {
+        $token = '';
+        if (!empty($config['token'])) {
             $token = $config['token'];
         }
         $apiUrl = self::DEFAULT_API_URL;
@@ -101,12 +125,33 @@ class Client extends \GuzzleHttp\Client
             $maxRetries = $config['backoffMaxTries'];
         }
 
+        $this->setUrl($apiUrl);
+        $this->guzzle = $this->initClient(
+            $token,
+            $runId,
+            $userAgent,
+            $maxRetries,
+            $config,
+            $delay
+        );
+        if (!empty($config['super'])) {
+            $this->setSuper($config['super']);
+        }
+    }
+
+    protected function initClient(
+        $token,
+        $runId,
+        $userAgent,
+        $maxRetries,
+        array $config = [],
+        callable $delay = null
+    ) {
         // Initialize handlers (start with those supplied in constructor)
-        if (isset($config['handler']) && is_a($config['handler'], HandlerStack::class)) {
+        if (isset($config['handler']) && $config['handler'] instanceof HandlerStack) {
             $handlerStack = HandlerStack::create($config['handler']);
         } else {
             $handlerStack = HandlerStack::create();
-
         }
         // Set exponential backoff for cases where job detail returns error
         $handlerStack->push(Middleware::retry(
@@ -116,8 +161,10 @@ class Client extends \GuzzleHttp\Client
         // Set handler to set default headers
         $handlerStack->push(Middleware::mapRequest(
             function (RequestInterface $request) use ($token, $runId, $userAgent) {
-                $req = $request->withHeader('X-StorageApi-Token', $token)
-                    ->withHeader('User-Agent', $userAgent);
+                $req = $request->withHeader('User-Agent', $userAgent);
+                if ($token) {
+                    $req = $req->withHeader('X-StorageApi-Token', $token);
+                }
                 if (!$req->hasHeader('content-type')) {
                     $req = $req->withHeader('Content-type', 'application/json');
                 }
@@ -129,7 +176,7 @@ class Client extends \GuzzleHttp\Client
         ));
 
         // Set client logger
-        if (isset($config['logger']) && is_a($config['logger'], LoggerInterface::class)) {
+        if (isset($config['logger']) && $config['logger'] instanceof LoggerInterface) {
             $handlerStack->push(Middleware::log(
                 $config['logger'],
                 new MessageFormatter(
@@ -140,12 +187,12 @@ class Client extends \GuzzleHttp\Client
         }
 
         // finally create the instance
-        $client = new static(['base_url' => $apiUrl, 'handler' => $handlerStack]);
-        $client->setUrl($apiUrl);
-        if (!empty($config['super'])) {
-            $client->setSuper($config['super']);
-        }
-        return $client;
+        return new GuzzleClient(['base_url' => $this->url, 'handler' => $handlerStack]);
+    }
+
+    public function getGuzzle()
+    {
+        return $this->guzzle;
     }
 
 
@@ -214,7 +261,7 @@ class Client extends \GuzzleHttp\Client
 
         try {
             $request = new Request('POST', $uri, [], json_encode($body));
-            $response = $this->send($request);
+            $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
         }
@@ -235,7 +282,7 @@ class Client extends \GuzzleHttp\Client
         $uri = $uri->withPath("queue/job/{$job}");
         try {
             $request = new Request('GET', $uri);
-            $response = $this->send($request);
+            $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
         }
@@ -271,7 +318,7 @@ class Client extends \GuzzleHttp\Client
         $uri = $uri->withPath(implode('/', $uriParts));
         try {
             $request = new Request('POST', $uri, ["Content-Type" => "text/plain"], $string);
-            $response = $this->send($request);
+            $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
         }
@@ -307,7 +354,7 @@ class Client extends \GuzzleHttp\Client
         $uri = $uri->withPath(implode('/', $uriParts));
         try {
             $request = new Request('POST', $uri, ['Content-type' => 'application/json',], json_encode($array));
-            $response = $this->send($request);
+            $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
         }
