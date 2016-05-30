@@ -190,12 +190,6 @@ class Client
         return new GuzzleClient(['base_url' => $this->url, 'handler' => $handlerStack]);
     }
 
-    public function getGuzzle()
-    {
-        return $this->guzzle;
-    }
-
-
     /**
      * Set parent component.
      * @param string $super Name of the parent component.
