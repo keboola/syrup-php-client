@@ -66,12 +66,32 @@ class Client
         };
     }
 
+    /**
+     * Create a client instance
+     *
+     * @param array $config Client configuration settings:
+     *     - token: (optional) Storage API token.
+     *     - runId: (optional) Storage API runId.
+     *     - url: (optional) Syrup API URL to override the default (DEFAULT_API_URL).
+     *     - super: (optional) Name of parent component if any.
+     *     - userAgent: (optional) Custom user agent (appended to the default).
+     *     - backoffMaxTries: (optional) Number of retries in case of backend error.
+     *     - logger: (optional) instance of Psr\Log\LoggerInterface.
+     *     - handler: (optional) instance of GuzzleHttp\HandlerStack.
+     * @param callable $delay Optional custom delay method to apply (default is exponential)
+     * @return Client
+     * @deprecated
+     */
+    public static function factory(array $config = [], callable $delay = null)
+    {
+        return new self($config, $delay);
+    }
 
     /**
      * Create a client instance
      *
      * @param array $config Client configuration settings:
-     *     - token: (required) Storage API token.
+     *     - token: (optional) Storage API token.
      *     - runId: (optional) Storage API runId.
      *     - url: (optional) Syrup API URL to override the default (DEFAULT_API_URL).
      *     - super: (optional) Name of parent component if any.
@@ -82,7 +102,7 @@ class Client
      * @param callable $delay Optional custom delay method to apply (default is exponential)
      * @return Client
      */
-    public static function factory(array $config = [], callable $delay = null)
+    public function __construct(array $config = [], callable $delay = null)
     {
         $token = '';
         if (!empty($config['token'])) {
@@ -105,8 +125,30 @@ class Client
             $maxRetries = $config['backoffMaxTries'];
         }
 
+        $this->setUrl($apiUrl);
+        $this->guzzle = $this->initClient(
+            $token,
+            $runId,
+            $userAgent,
+            $maxRetries,
+            $config,
+            $delay
+        );
+        if (!empty($config['super'])) {
+            $this->setSuper($config['super']);
+        }
+    }
+
+    protected function initClient(
+        $token,
+        $runId,
+        $userAgent,
+        $maxRetries,
+        array $config = [],
+        callable $delay = null)
+    {
         // Initialize handlers (start with those supplied in constructor)
-        if (isset($config['handler']) && is_a($config['handler'], HandlerStack::class)) {
+        if (isset($config['handler']) && $config['handler'] instanceof HandlerStack) {
             $handlerStack = HandlerStack::create($config['handler']);
         } else {
             $handlerStack = HandlerStack::create();
@@ -134,7 +176,7 @@ class Client
         ));
 
         // Set client logger
-        if (isset($config['logger']) && is_a($config['logger'], LoggerInterface::class)) {
+        if (isset($config['logger']) && $config['logger'] instanceof LoggerInterface) {
             $handlerStack->push(Middleware::log(
                 $config['logger'],
                 new MessageFormatter(
@@ -145,18 +187,7 @@ class Client
         }
 
         // finally create the instance
-        $guzzle = new GuzzleClient(['base_url' => $apiUrl, 'handler' => $handlerStack]);
-        $client = new static($guzzle);
-        $client->setUrl($apiUrl);
-        if (!empty($config['super'])) {
-            $client->setSuper($config['super']);
-        }
-        return $client;
-    }
-
-    public function __construct(GuzzleClient $client)
-    {
-        $this->guzzle = $client;
+        return new GuzzleClient(['base_url' => $this->url, 'handler' => $handlerStack]);
     }
 
     public function getGuzzle()
