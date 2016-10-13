@@ -412,5 +412,4 @@ class Client
         }
         return $job;
     }
-
 }
