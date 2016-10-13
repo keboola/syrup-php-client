@@ -8,7 +8,6 @@ use GuzzleHttp\MessageFormatter;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
-use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Client as GuzzleClient;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -287,11 +286,15 @@ class Client
      */
     public function createAsyncJob($path, $method = "POST", $options = array())
     {
-        $uri = new Uri($this->url);
+        $uriParts = [];
         if ($this->super) {
-            $uri = $uri->withPath("{$this->super}/{$path}");
+            $uriParts[] = $this->super;
+        }
+        $uriParts[] = $path;
+        if (substr($this->url, -1) == '/') {
+            $uri = $this->url . implode('/', $uriParts);
         } else {
-            $uri = $uri->withPath("{$path}");
+            $uri = $this->url . '/' . implode('/', $uriParts);
         }
         $body = [];
         if (isset($options['body'])) {
@@ -322,8 +325,11 @@ class Client
      */
     public function getJob($job)
     {
-        $uri = new Uri($this->queueUrl);
-        $uri = $uri->withPath("queue/job/{$job}");
+        if (substr($this->queueUrl, -1) == '/') {
+            $uri = $this->queueUrl . "queue/job/{$job}";
+        } else {
+            $uri = $this->queueUrl . "/queue/job/{$job}";
+        }
         try {
             $request = new Request('GET', $uri);
             $response = $this->guzzle->send($request);
@@ -357,8 +363,11 @@ class Client
             $uriParts[] = $options['path'];
         }
         $uriParts[] = 'encrypt';
-        $uri = new Uri($this->url);
-        $uri = $uri->withPath(implode('/', $uriParts));
+        if (substr($this->url, -1) == '/') {
+            $uri = $this->url . implode('/', $uriParts);
+        } else {
+            $uri = $this->url . '/' . implode('/', $uriParts);
+        }
         try {
             $request = new Request('POST', $uri, ["Content-Type" => "text/plain"], $string);
             $response = $this->guzzle->send($request);
@@ -392,8 +401,11 @@ class Client
             $uriParts[] = $options['path'];
         }
         $uriParts[] = 'encrypt';
-        $uri = new Uri($this->url);
-        $uri = $uri->withPath(implode('/', $uriParts));
+        if (substr($this->url, -1) == '/') {
+            $uri = $this->url . implode('/', $uriParts);
+        } else {
+            $uri = $this->url . '/' . implode('/', $uriParts);
+        }
         try {
             $request = new Request('POST', $uri, ['Content-type' => 'application/json',], json_encode($array));
             $response = $this->guzzle->send($request);
