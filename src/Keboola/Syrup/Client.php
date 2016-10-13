@@ -36,16 +36,25 @@ class Client
      */
     protected $super = '';
 
-    /*
+    /**
      * @var string Actual base request URL.
      */
     private $url;
+
+    /**
+     * @var Actual base request URL for queue
+     */
+    private $queueUrl;
 
     /**
      * GuzzleClient
      */
     protected $guzzle;
 
+    /**
+     * @param int $maxRetries
+     * @return \Closure
+     */
     private static function createDefaultDecider($maxRetries = 3)
     {
         return function (
@@ -105,27 +114,39 @@ class Client
     public function __construct(array $config = [], callable $delay = null)
     {
         $token = '';
+
         if (!empty($config['token'])) {
             $token = $config['token'];
         }
+
         $apiUrl = self::DEFAULT_API_URL;
         if (!empty($config['url'])) {
             $apiUrl = $config['url'];
         }
+        $this->setUrl($apiUrl);
+
+        if (!empty($config['queueUrl'])) {
+            $this->setQueueUrl($config['queueUrl']);
+        } else {
+            $this->setQueueUrl($apiUrl);
+        }
+
         $runId = '';
         if (!empty($config['runId'])) {
             $runId = $config['runId'];
         }
+
         $userAgent = self::DEFAULT_USER_AGENT;
         if (!empty($config['userAgent'])) {
             $userAgent .= ' - ' . $config['userAgent'];
         }
+
         $maxRetries = self::DEFAULT_BACKOFF_RETRIES;
         if (!empty($config['backoffMaxTries'])) {
             $maxRetries = $config['backoffMaxTries'];
         }
 
-        $this->setUrl($apiUrl);
+
         $this->guzzle = $this->initClient(
             $token,
             $runId,
@@ -134,11 +155,21 @@ class Client
             $config,
             $delay
         );
+
         if (!empty($config['super'])) {
             $this->setSuper($config['super']);
         }
     }
 
+    /**
+     * @param $token
+     * @param $runId
+     * @param $userAgent
+     * @param $maxRetries
+     * @param array $config
+     * @param callable|null $delay
+     * @return GuzzleClient
+     */
     protected function initClient(
         $token,
         $runId,
@@ -199,7 +230,6 @@ class Client
         $this->super = $super;
     }
 
-
     /**
      * Set request URL
      * @param string $url Base url for requests.
@@ -209,6 +239,13 @@ class Client
         $this->url = $url;
     }
 
+    /**
+     * @param $queueUrl
+     */
+    protected function setQueueUrl($queueUrl)
+    {
+        $this->queueUrl = $queueUrl;
+    }
 
     /**
      * Decode a JSON response.
@@ -225,7 +262,6 @@ class Client
 
         return $data === null ? array() : $data;
     }
-
 
     /**
      * Create a new asynchronous job.
@@ -277,7 +313,6 @@ class Client
         return $this->decodeResponse($response);
     }
 
-
     /**
      * Get asynchronous job status (waiting, processing, etc.).
      *
@@ -287,7 +322,7 @@ class Client
      */
     public function getJob($job)
     {
-        $uri = new Uri($this->url);
+        $uri = new Uri($this->queueUrl);
         $uri = $uri->withPath("queue/job/{$job}");
         try {
             $request = new Request('GET', $uri);
@@ -297,7 +332,6 @@ class Client
         }
         return $this->decodeResponse($response);
     }
-
 
     /**
      *
@@ -333,7 +367,6 @@ class Client
         }
         return $response->getBody()->read($response->getBody()->getSize());
     }
-
 
     /**
      * Encrypt array.

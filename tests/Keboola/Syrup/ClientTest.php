@@ -335,6 +335,13 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
         $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
 
+        $request = $container[1]['request'];
+        $this->assertEquals("https://syrup.keboola.com/queue/job/123456", $request->getUri()->__toString());
+
+        $request = $container[2]['request'];
+        $this->assertEquals("https://syrup.keboola.com/queue/job/123456", $request->getUri()->__toString());
+
+
         $this->assertCount(3, $container);
         $this->assertEquals("success", $response["status"]);
     }
@@ -809,6 +816,9 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $method = $reflection->getMethod('setUrl');
         $method->setAccessible(true);
         $method->invoke($client, 'omfg::/mfg.mfg');
+        $method = $reflection->getMethod('setQueueUrl');
+        $method->setAccessible(true);
+        $method->invoke($client, 'omfg::/mfg.mfg');
         try {
             $client->getJob('123');
             $this->fail("Invalid request must raise exception.");
@@ -901,5 +911,67 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $data = fread($stream, 1000);
         $this->assertContains('Syrup PHP Client', $data);
         $this->assertContains('GET', $data);
+    }
+
+    /**
+     * Test runJob method with different states.
+     */
+    public function testCustomUrlCustomQueueUrl()
+    {
+        $mock = new MockHandler([
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "id": 123456,
+                    "url": "https://syrup-testing.keboola.com/queue/job/123456",
+                    "status": "waiting"
+                }'
+            ),
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "id": 123456,
+                    "status": "processing"
+                }'
+            ),
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "id": 123456,
+                    "status": "success"
+                }'
+            )
+        ]);
+
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $client = new Client([
+            'token' => 'test',
+            'handler' => $stack,
+            'url' => 'http://syrup.local',
+            'queueUrl' => 'http://queue.local'
+        ]);
+        $response = $client->runJob("test-component", ["config" => 1]);
+
+        $this->assertCount(3, $container);
+
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals("http://syrup.local/test-component/run", $request->getUri()->__toString());
+
+        $request = $container[1]['request'];
+        $this->assertEquals("http://queue.local/queue/job/123456", $request->getUri()->__toString());
+
+        $request = $container[2]['request'];
+        $this->assertEquals("http://queue.local/queue/job/123456", $request->getUri()->__toString());
+
+        $this->assertEquals("success", $response["status"]);
     }
 }
