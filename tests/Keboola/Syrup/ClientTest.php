@@ -38,11 +38,11 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
-           // 'logger' => $log
-           'handler' => $stack
+            // 'logger' => $log
+            'handler' => $stack
         ]);
         $client->createJob("test-component", ["config" => 1]);
 
@@ -82,7 +82,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'url' => 'https://example.com',
@@ -125,7 +125,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'super' => 'super',
             'runId' => 'runIdTest',
@@ -166,7 +166,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'handler' => $stack,
@@ -205,7 +205,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'super' => 'docker',
@@ -262,11 +262,138 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'handler' => $stack
         ]);
         $response = $client->runJob("test-component", ["config" => 1]);
+
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals("https://syrup.keboola.com/test-component/run", $request->getUri()->__toString());
+        $this->assertEquals("POST", $request->getMethod());
+        $this->assertEquals('{"config":1}', $request->getBody()->read(1000));
+        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
+
+        $this->assertCount(3, $container);
+        $this->assertEquals("success", $response["status"]);
+    }
+    
+
+    /**
+     * Test runAsyncAction method with a POST request
+     */
+    public function testRunAsyncActionPost()
+    {
+        $mock = new MockHandler([
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "id": 123456,
+                    "url": "https://syrup-testing.keboola.com/queue/job/123456",
+                    "status": "waiting"
+                }'
+            ),
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "id": 123456,
+                    "status": "processing"
+                }'
+            ),
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "id": 123456,
+                    "status": "success"
+                }'
+            )
+        ]);
+
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $client = new Client([
+            'token' => 'test',
+            'handler' => $stack,
+            'runId' => 'runIdTest',
+            'super' => 'provisioning'
+        ]);
+        $response = $client->runAsyncAction("async/docker", "POST", ["body" => ["type" => "rstudio"]]);
+
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals("https://syrup.keboola.com/provisioning/async/docker", $request->getUri()->__toString());
+        $this->assertEquals("POST", $request->getMethod());
+        $this->assertEquals('{"type":"rstudio"}', $request->getBody()->read(1000));
+        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
+        $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
+
+        $this->assertCount(3, $container);
+        $this->assertEquals("success", $response["status"]);
+    }
+
+
+    /**
+     * Test runAsyncAction method with a DELETE request
+     */
+    public function testRunAsyncActionDelete()
+    {
+        $mock = new MockHandler([
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "id": 123456,
+                    "url": "https://syrup-testing.keboola.com/queue/job/123456",
+                    "status": "waiting"
+                }'
+            ),
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "id": 123456,
+                    "status": "processing"
+                }'
+            ),
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "id": 123456,
+                    "status": "success"
+                }'
+            )
+        ]);
+
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $client = new Client([
+            'token' => 'test',
+            'handler' => $stack,
+            'runId' => 'runIdTest',
+            'super' => 'provisioning'
+        ]);
+        $response = $client->runAsyncAction("async/docker/1", "DELETE");
+
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals("https://syrup.keboola.com/provisioning/async/docker/1", $request->getUri()->__toString());
+        $this->assertEquals("DELETE", $request->getMethod());
+        $this->assertEquals('[]', $request->getBody()->read(1000));
+        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
+        $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
 
         $this->assertCount(3, $container);
         $this->assertEquals("success", $response["status"]);
@@ -307,7 +434,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'handler' => $stack
         ]);
@@ -353,7 +480,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'handler' => $stack,
             'backoffMaxTries' => 2
@@ -414,7 +541,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'handler' => $stack
         ]);
@@ -442,7 +569,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'handler' => $stack
         ]);
@@ -468,7 +595,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'handler' => $stack
@@ -508,7 +635,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $history = Middleware::history($container);
         $stack = HandlerStack::create($mock);
         $stack->push($history);
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'handler' => $stack
@@ -545,7 +672,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $history = Middleware::history($container);
         $stack = HandlerStack::create($mock);
         $stack->push($history);
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'super' => 'docker',
@@ -587,7 +714,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'super' => 'docker',
@@ -626,7 +753,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'super' => 'docker',
@@ -656,7 +783,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'super' => 'docker',
@@ -673,7 +800,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
 
     public function testInternalClientError()
     {
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'super' => 'docker',
@@ -722,7 +849,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack->push($history);
 
         $defaults = array_merge(['handler' => $stack], $options);
-        $client = Client::factory($defaults);
+        $client = new Client($defaults);
         $client->encryptString("docker", "test");
 
         /** @var Request $request */
@@ -760,7 +887,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stream = fopen('data:text/plain,log', 'rw');
         $streamOutput = new StreamOutput($stream, StreamOutput::VERBOSITY_VERY_VERBOSE);
         $log = new ConsoleLogger($streamOutput);
-        $client = Client::factory([
+        $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
             'super' => 'docker',

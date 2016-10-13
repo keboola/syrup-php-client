@@ -239,13 +239,28 @@ class Client
      */
     public function createJob($component, $options = array())
     {
+        return $this->createAsyncJob($component .  "/run", "POST", $options);
+    }
+
+    /**
+     * @param $path
+     * @param string $method
+     * @param array $options
+     * @return array
+     * @throws ClientException
+     */
+    public function createAsyncJob($path, $method = "POST", $options = array())
+    {
         $uri = new Uri($this->url);
         if ($this->super) {
-            $uri = $uri->withPath("{$this->super}/{$component}/run");
+            $uri = $uri->withPath("{$this->super}/{$path}");
         } else {
-            $uri = $uri->withPath("{$component}/run");
+            $uri = $uri->withPath("{$path}");
         }
         $body = [];
+        if (isset($options['body'])) {
+            $body = $options['body'];
+        }
         if (isset($options['config'])) {
             $body['config'] = $options['config'];
         }
@@ -254,7 +269,7 @@ class Client
         }
 
         try {
-            $request = new Request('POST', $uri, [], json_encode($body));
+            $request = new Request($method, $uri, [], json_encode($body));
             $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
@@ -368,7 +383,19 @@ class Client
      */
     public function runJob($component, array $options = [])
     {
-        $response = $this->createJob($component, $options);
+        return $this->runAsyncAction($component . "/run", "POST", $options);
+    }
+
+    /**
+     * @param $path
+     * @param string $method
+     * @param array $options
+     * @return array
+     * @throws ClientException
+     */
+    public function runAsyncAction($path, $method = "POST", array $options = [])
+    {
+        $response = $this->createAsyncJob($path, $method, $options);
         if (!isset($response["id"])) {
             throw new ClientException("Invalid response.");
         }
@@ -385,4 +412,5 @@ class Client
         }
         return $job;
     }
+
 }

@@ -42,7 +42,7 @@ Read more in [Composer documentation](http://getcomposer.org/doc/01-basic-usage.
 
 ## Usage examples
 
-Table write:
+Create and run a job
 
 ```php
 require 'vendor/autoload.php';
@@ -73,3 +73,34 @@ $client = new Client([
 $response = $client->encryptString("test-component", "string", ["path" => "configs"]);
 ```
 
+Create a custom job on a component (calls `POST provisioning/async/docker`) with `{"type" => "rstudio"}` body
+
+```php
+require 'vendor/autoload.php';
+
+use Keboola\Syrup\Client,
+
+$client = new Client([
+  'token' => 'YOUR_TOKEN',
+  'runId' => 'CURRENT_RUNID',
+  'super' => 'provisioning'
+]);
+
+$response = $client->runAsyncAction("async/docker", "POST", ["body" => ["type" => "rstudio"]]);
+```
+
+Create a custom DELETE job on a component (calls `DELETE provisioning/async/docker/1`)
+                                         
+```php
+require 'vendor/autoload.php';
+
+use Keboola\Syrup\Client,
+
+$client = new Client([
+  'token' => 'YOUR_TOKEN',
+  'runId' => 'CURRENT_RUNID',
+  'super' => 'provisioning'
+]);
+
+$response = $client->runAsyncAction("async/docker/1", "DELETE");
+```
