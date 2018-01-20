@@ -278,7 +278,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(3, $container);
         $this->assertEquals("success", $response["status"]);
     }
-    
+
 
     /**
      * Test runAsyncAction method with a POST request
@@ -583,203 +583,6 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $client->runJob("test-component", ["config" => 1]);
     }
 
-    /**
-     * Test encrypt plain string.
-     */
-    public function testEncryptString()
-    {
-        $mock = new MockHandler([
-            new Response(
-                200,
-                ['Content-Type' => 'text/plain'],
-                'KBC::Encrypted==hgAYFu8FiztDlUOJ5Bg7cxoBKwOeNTONrv8Be/vsWMif3hW9dl8uunwuNvD4+c6ME0GHHjVCwRkgFvn3lD94PQ=='
-            )
-        ]);
-
-        // Add the history middleware to the handler stack.
-        $container = [];
-        $history = Middleware::history($container);
-        $stack = HandlerStack::create($mock);
-        $stack->push($history);
-
-        $client = new Client([
-            'token' => 'test',
-            'runId' => 'runIdTest',
-            'handler' => $stack
-        ]);
-        $client->encryptString("docker", "test");
-
-        $this->assertCount(1, $container);
-        /** @var Request $request */
-        $request = $container[0]['request'];
-        $this->assertEquals("https://syrup.keboola.com/docker/encrypt", $request->getUri()->__toString());
-        $this->assertEquals("POST", $request->getMethod());
-        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
-        $this->assertEquals("text/plain", $request->getHeader("content-type")[0]);
-        $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
-        $this->assertEquals('test', $request->getBody());
-    }
-
-
-    /**
-     * Test encrypt of a JSON array.
-     */
-    public function testEncryptData()
-    {
-        $mock = new MockHandler([
-            new Response(
-                200,
-                ['Content-Type' => 'application/json'],
-                '{
-                    "plain": "test",
-                    "#encrypted": "KBC::Encrypted==XbMxAbF29V+pKS2kG8OZkMdFjyAFc2bO+PUSE1q8qzYXPhGGLSzY+m4kTtJ5264mapanmlj1Gm95rvJMC+I0XQ=="
-                }'
-            )
-        ]);
-
-        // Add the history middleware to the handler stack.
-        $container = [];
-        $history = Middleware::history($container);
-        $stack = HandlerStack::create($mock);
-        $stack->push($history);
-        $client = new Client([
-            'token' => 'test',
-            'runId' => 'runIdTest',
-            'handler' => $stack
-        ]);
-        $client->encryptArray("docker", ["plain" => "test", "#encrypted" => "test"]);
-
-        $this->assertCount(1, $container);
-        /** @var Request $request */
-        $request = $container[0]['request'];
-        $this->assertEquals("https://syrup.keboola.com/docker/encrypt", $request->getUri()->__toString());
-        $this->assertEquals("POST", $request->getMethod());
-        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
-        $this->assertEquals("application/json", $request->getHeader("content-type")[0]);
-        $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
-        $this->assertEquals('{"plain":"test","#encrypted":"test"}', $request->getBody()->read(1000));
-    }
-
-
-    /**
-     * Test encrypt of plain string with parent component.
-     */
-    public function testEncryptStringWithSuper()
-    {
-        $mock = new MockHandler([
-            new Response(
-                200,
-                ['Content-Type' => 'application/json'],
-                'KBC::ComponentEncrypted==U6pdFDMt/Di7cc1ySnWkSkUi1UGpmOnDMxb6+VXlZulITBOyz5X1UciP1IZkFHTN0Ckw1ERBcK8bjRN9Vz/Q7lts2ig8ENjd5oO7ue1HqWj00Ea0/xNZvFlh0f5TOqY2'
-            )
-        ]);
-
-        // Add the history middleware to the handler stack.
-        $container = [];
-        $history = Middleware::history($container);
-        $stack = HandlerStack::create($mock);
-        $stack->push($history);
-        $client = new Client([
-            'token' => 'test',
-            'runId' => 'runIdTest',
-            'super' => 'docker',
-            'handler' => $stack
-        ]);
-        $client->encryptString("demo", "test");
-
-        $this->assertCount(1, $container);
-        /** @var Request $request */
-        $request = $container[0]['request'];
-        $this->assertEquals("https://syrup.keboola.com/docker/demo/encrypt", $request->getUri()->__toString());
-        $this->assertEquals("POST", $request->getMethod());
-        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
-        $this->assertEquals("text/plain", $request->getHeader("content-type")[0]);
-        $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
-        $this->assertEquals('test', $request->getBody()->read(1000));
-    }
-
-
-    /**
-     * Test encrypt array with parent component and additional path.
-     */
-    public function testDataWithSuperAndSubPath()
-    {
-        $mock = new MockHandler([
-            new Response(
-                200,
-                ['Content-Type' => 'text/plain'],
-                '{
-                    "plain": "test",
-                    "#encrypted": "KBC::Encrypted==XbMxAbF29V+pKS2kG8OZkMdFjyAFc2bO+PUSE1q8qzYXPhGGLSzY+m4kTtJ5264mapanmlj1Gm95rvJMC+I0XQ=="
-                }'
-            )
-        ]);
-
-        // Add the history middleware to the handler stack.
-        $container = [];
-        $history = Middleware::history($container);
-        $stack = HandlerStack::create($mock);
-        $stack->push($history);
-
-        $client = new Client([
-            'token' => 'test',
-            'runId' => 'runIdTest',
-            'super' => 'docker',
-            'handler' => $stack
-        ]);
-        $client->encryptArray("demo", ["plain" => "test", "#encrypted" => "test"], ["path" => "configs"]);
-
-        $this->assertCount(1, $container);
-        /** @var Request $request */
-        $request = $container[0]['request'];
-        $this->assertEquals("https://syrup.keboola.com/docker/demo/configs/encrypt", $request->getUri()->__toString());
-        $this->assertEquals("POST", $request->getMethod());
-        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
-        $this->assertEquals("application/json", $request->getHeader("content-type")[0]);
-        $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
-        $this->assertEquals('{"plain":"test","#encrypted":"test"}', $request->getBody()->read(1000));
-    }
-
-
-    /**
-     * Test encrypt plain string with parent component and additional path.
-     */
-    public function testEncryptStringWithSuperAndSubPath()
-    {
-        $mock = new MockHandler([
-            new Response(
-                200,
-                ['Content-Type' => 'text/plain'],
-                'KBC::ComponentProjectEncrypted==Z05QovYpXTZN/DeHyXlarISB3Ca7Zs/ORW6fqs5EsIZaq7CZuHx9tAZFIxQHjd4HS15FuIcHC2Ko/q70MfH94t9TF7chg6zRDK7rOugSUpIvTXRelGHTkLzWkwiwd419'
-            )
-        ]);
-
-        // Add the history middleware to the handler stack.
-        $container = [];
-        $history = Middleware::history($container);
-        $stack = HandlerStack::create($mock);
-        $stack->push($history);
-
-        $client = new Client([
-            'token' => 'test',
-            'runId' => 'runIdTest',
-            'super' => 'docker',
-            'handler' => $stack
-        ]);
-        $client->encryptString("demo", "test", ["path" => "configs"]);
-
-        $this->assertCount(1, $container);
-        /** @var Request $request */
-        $request = $container[0]['request'];
-        $this->assertEquals("https://syrup.keboola.com/docker/demo/configs/encrypt", $request->getUri()->__toString());
-        $this->assertEquals("POST", $request->getMethod());
-        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
-        $this->assertEquals("text/plain", $request->getHeader("content-type")[0]);
-        $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
-        $this->assertEquals('test', $request->getBody());
-    }
-
-
     public function testMalformedResponse()
     {
         $mock = new MockHandler([new Response(200, ['Content-Type' => 'text/plain'], 'test')]);
@@ -804,7 +607,6 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-
     public function testInternalClientError()
     {
         $client = new Client([
@@ -825,18 +627,6 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         } catch (ClientException $e) {
             $this->assertContains('resolve host', $e->getMessage());
         }
-        try {
-            $client->encryptArray('demo', ['#encrypt' => 'test']);
-            $this->fail("Invalid request must raise exception.");
-        } catch (ClientException $e) {
-            $this->assertContains('resolve host', $e->getMessage());
-        }
-        try {
-            $client->encryptString('demo', 'test');
-            $this->fail("Invalid request must raise exception.");
-        } catch (ClientException $e) {
-            $this->assertContains('resolve host', $e->getMessage());
-        }
     }
 
     /**
@@ -848,7 +638,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
             new Response(
                 200,
                 ['Content-Type' => 'text/plain'],
-                'KBC::Encrypted==hgAYFu8FiztDlUOJ5Bg7cxoBKwOeNTONrv8Be/vsWMif3hW9dl8uunwuNvD4+c6ME0GHHjVCwRkgFvn3lD94PQ=='
+                '{"id":347372343,"runId":"347372339.347372344","isFinished":true}'
             )
         ]);
 
@@ -860,7 +650,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
 
         $defaults = array_merge(['handler' => $stack], $options);
         $client = new Client($defaults);
-        $client->encryptString("docker", "test");
+        $client->getJob("123");
 
         /** @var Request $request */
         $request = $container[0]['request'];
