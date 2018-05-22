@@ -167,7 +167,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
             'runId' => 'runIdTest',
             'handler' => $stack
         ]);
-        $client->executeSyncAction('test-component', 'example', [
+        $client->runSyncAction('test-component', 'example', [
             'url' => 'https://example.com',
         ]);
 

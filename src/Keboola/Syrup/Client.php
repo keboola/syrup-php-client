@@ -363,7 +363,7 @@ class Client
      * @return array Sync action response
      * @throws ClientException In case of execution error
      */
-    public function executeSyncAction($component, $action, array $configData)
+    public function runSyncAction($component, $action, array $configData)
     {
         $uriParts = [];
         if ($this->super) {
