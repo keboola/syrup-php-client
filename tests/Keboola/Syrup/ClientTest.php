@@ -143,6 +143,43 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
     }
 
+    public function testRunSyncAction()
+    {
+        $mock = new MockHandler([
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "response": 1
+                }'
+            )
+        ]);
+
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $client = new Client([
+            'token' => 'test',
+            'super' => 'docker',
+            'runId' => 'runIdTest',
+            'handler' => $stack
+        ]);
+        $client->executeSyncAction('test-component', 'example', [
+            'url' => 'https://example.com',
+        ]);
+
+        $this->assertCount(1, $container);
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals("https://syrup.keboola.com/docker/test-component/action/example", $request->getUri()->__toString());
+        $this->assertEquals("POST", $request->getMethod());
+        $this->assertEquals('{"configData":{"url":"https:\/\/example.com"}}', $request->getBody()->read(1000));
+        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
+        $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
+    }
 
     /**
      * Test getJob method.
