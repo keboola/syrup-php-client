@@ -355,6 +355,41 @@ class Client
     }
 
     /**
+     * Run  docker runner sync action
+     *
+     * @param string $syncActionBaseUrl
+     * @param string $component
+     * @param string $action
+     * @param array $configData
+     * @return array Sync action response
+     * @throws ClientException In case of execution error
+     */
+    public function runSyncAction($syncActionBaseUrl, $component, $action, array $configData)
+    {
+        $uriParts = [];
+        if ($this->super) {
+            $uriParts[] = $this->super;
+        }
+        $uriParts[] = $component;
+        $uriParts[] = 'action';
+        $uriParts[] = $action;
+
+        $uri = rtrim($syncActionBaseUrl, '/') . '/' . implode('/', $uriParts);
+
+        $body = [
+            'configData' => $configData,
+        ];
+
+        try {
+            $request = new Request('POST', $uri, [], json_encode($body));
+            $response = $this->guzzle->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $this->decodeResponse($response);
+    }
+
+    /**
      * @param $path
      * @param string $method
      * @param array $options
