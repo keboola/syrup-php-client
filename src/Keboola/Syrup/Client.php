@@ -357,13 +357,14 @@ class Client
     /**
      * Run  docker runner sync action
      *
+     * @param string $syncActionBaseUrl
      * @param string $component
      * @param string $action
      * @param array $configData
      * @return array Sync action response
      * @throws ClientException In case of execution error
      */
-    public function runSyncAction($component, $action, array $configData)
+    public function runSyncAction($syncActionBaseUrl, $component, $action, array $configData)
     {
         $uriParts = [];
         if ($this->super) {
@@ -373,11 +374,7 @@ class Client
         $uriParts[] = 'action';
         $uriParts[] = $action;
 
-        if (substr($this->url, -1) == '/') {
-            $uri = $this->url . implode('/', $uriParts);
-        } else {
-            $uri = $this->url . '/' . implode('/', $uriParts);
-        }
+        $uri = rtrim($syncActionBaseUrl, '/') . '/' . implode('/', $uriParts);
 
         $body = [
             'configData' => $configData,

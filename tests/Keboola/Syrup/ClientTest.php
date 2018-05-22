@@ -167,14 +167,14 @@ class ClientTest extends \PHPUnit_Framework_TestCase
             'runId' => 'runIdTest',
             'handler' => $stack
         ]);
-        $client->runSyncAction('test-component', 'example', [
+        $client->runSyncAction('https://docker-runner.keboola.com/', 'test-component', 'example', [
             'url' => 'https://example.com',
         ]);
 
         $this->assertCount(1, $container);
         /** @var Request $request */
         $request = $container[0]['request'];
-        $this->assertEquals("https://syrup.keboola.com/docker/test-component/action/example", $request->getUri()->__toString());
+        $this->assertEquals("https://docker-runner.keboola.com/docker/test-component/action/example", $request->getUri()->__toString());
         $this->assertEquals("POST", $request->getMethod());
         $this->assertEquals('{"configData":{"url":"https:\/\/example.com"}}', $request->getBody()->read(1000));
         $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
