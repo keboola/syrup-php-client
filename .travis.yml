@@ -2,15 +2,23 @@ language: php
 php:
   - 5.6
   - 7.0
-notifications:
-  email: false
+  - 7.1
+  - 7.2
+env:
+  - GIT_COMMIT_SHA=$TRAVIS_COMMIT GIT_BRANCH=$TRAVIS_BRANCH
+
 install:
   - composer install --dev --no-scripts
 script:
   - ./vendor/bin/phpcs --standard=psr2 --ignore=vendor -n .
   - php ./vendor/bin/phpunit --coverage-clover build/logs/clover.xml
 after_success:
-  - ./vendor/bin/test-reporter --stdout > codeclimate.json
-  - "curl -X POST -d @codeclimate.json -H 'Content-Type: application/json' -H 'User-Agent: Code Climate (PHP Test Reporter v0.1.1)' https://codeclimate.com/test_reports"
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
+  - ./cc-test-reporter before-build
+  - ./cc-test-reporter after-build --exit-code 0
+
 notifications:
-  slack: keboola:5eSaah061XMWdUXA7swHBhtP
+  slack:
+    secure: amurga3WFmDsQk7yDtptz87KBh3ufhCOQ2u9NtAsi5fhSfTQFPA5ffxsitbru23oMKC57fp0zsHshtWOLBojWi9LjqoIgs6bLdwLn0qUzDtKbvaRWdONbZTyRT8hiK/vSzB+4IaXNmYMK24wBDiF0AK77+PAeKIEUXRzVoDvqFs=
+  email: false

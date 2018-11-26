@@ -8,12 +8,7 @@
          processIsolation="false"
          stopOnFailure="false"
          stopOnError="false"
-         syntaxCheck="false"
          bootstrap="bootstrap.php">
-    <php>
-        <ini name="display_errors" value="true"/>
-    </php>
-
     <testsuites>
         <testsuite name="KeboolaSyrupClientTests">
             <directory>tests</directory>
