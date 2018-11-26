@@ -9,6 +9,7 @@ use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Keboola\Syrup\Client;
 use Keboola\Syrup\ClientException;
+use Psr\Log\Test\TestLogger;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\StreamOutput;
 
@@ -721,9 +722,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $stack = HandlerStack::create($mock);
         $stack->push($history);
 
-        $stream = fopen('data:text/plain,log', 'rw');
-        $streamOutput = new StreamOutput($stream, StreamOutput::VERBOSITY_VERY_VERBOSE);
-        $log = new ConsoleLogger($streamOutput);
+        $log = new TestLogger();
         $client = new Client([
             'token' => 'test',
             'runId' => 'runIdTest',
@@ -734,10 +733,8 @@ class ClientTest extends \PHPUnit_Framework_TestCase
 
         $client->getJob('123');
         $this->assertCount(1, $container);
-        fseek($stream, 0);
-        $data = fread($stream, 1000);
-        $this->assertContains('Syrup PHP Client', $data);
-        $this->assertContains('GET', $data);
+        self::assertTrue($log->hasInfoThatContains('Syrup PHP Client'));
+        self::assertTrue($log->hasInfoThatContains('"GET  /1.1" 200'));
     }
 
     /**
