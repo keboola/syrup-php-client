@@ -5,8 +5,7 @@ php:
   - 7.1
   - 7.2
 env:
-  - GIT_COMMIT_SHA=$TRAVIS_COMMIT
-  - GIT_BRANCH=$TRAVIS_BRANCH
+  - GIT_COMMIT_SHA=$TRAVIS_COMMIT GIT_BRANCH=$TRAVIS_BRANCH
 
 install:
   - composer install --dev --no-scripts
