@@ -350,6 +350,7 @@ class Client
      * @param array $options Available options are:
      *      - config: configuration id.
      *      - configData: configuration data.
+     *      - tag: image tag to run
      * @return array Response data with job result.
      * @throws ClientException In case creation or waiting for the job failed.
      */
