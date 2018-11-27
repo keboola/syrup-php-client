@@ -59,7 +59,6 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('application/json', $request->getHeader("content-type")[0]);
     }
 
-
     /**
      * test createJob method with configData parameter
      */
@@ -96,6 +95,49 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         /** @var Request $request */
         $request = $container[0]['request'];
         $this->assertEquals("https://example.com/test-component/run", $request->getUri()->__toString());
+        $this->assertEquals("POST", $request->getMethod());
+        $this->assertEquals('{"configData":{"var":"val"}}', $request->getBody()->read(2000));
+        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
+        $this->assertEquals("runIdTest", $request->getHeader("x-kbc-runid")[0]);
+        $this->assertEquals('Keboola Syrup PHP Client - testClient', $request->getHeader("user-agent")[0]);
+    }
+
+    /**
+     * test createJob method with configData parameter
+     */
+    public function testCreateJobWithTag()
+    {
+        $mock = new MockHandler([
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "id": "80429487",
+                    "url": "https://syrup-testing.keboola.com/queue/job/80429487",
+                    "status": "waiting"
+                }'
+            )
+        ]);
+
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $client = new Client([
+            'token' => 'test',
+            'runId' => 'runIdTest',
+            'url' => 'https://example.com',
+            'userAgent' => 'testClient',
+            'handler' => $stack
+        ]);
+        $client->createJob("test-component", ["configData" => ["var" => "val"], "tag" => "1.2.3"]);
+
+        $this->assertCount(1, $container);
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals("https://example.com/test-component/run/tag/1.2.3", $request->getUri()->__toString());
         $this->assertEquals("POST", $request->getMethod());
         $this->assertEquals('{"configData":{"var":"val"}}', $request->getBody()->read(2000));
         $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
