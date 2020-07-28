@@ -693,19 +693,20 @@ class ClientTest extends \PHPUnit_Framework_TestCase
             'token' => 'test',
             'runId' => 'runIdTest',
             'super' => 'docker',
+            'backoffMaxTries' => 1,
         ]);
         $reflection = new \ReflectionClass($client);
         $method = $reflection->getMethod('setUrl');
         $method->setAccessible(true);
-        $method->invoke($client, 'omfg::/mfg.mfg');
+        $method->invoke($client, 'asdfghjkl');
         $method = $reflection->getMethod('setQueueUrl');
         $method->setAccessible(true);
-        $method->invoke($client, 'omfg::/mfg.mfg');
+        $method->invoke($client, 'asdfghjkl');
         try {
             $client->getJob('123');
             $this->fail("Invalid request must raise exception.");
         } catch (ClientException $e) {
-            $this->assertContains('resolve host', $e->getMessage());
+            $this->assertContains('Could not resolve', $e->getMessage());
         }
     }
 
