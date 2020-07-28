@@ -420,4 +420,20 @@ class Client
         }
         return $job;
     }
+
+    /**
+     * @return array
+     * @throws ClientException
+     */
+    public function getStats()
+    {
+        $uriBase = (substr($this->url, -1) === '/') ? $this->url : $this->url .= '/';
+        try {
+            $request = new Request('GET', $uriBase . 'docker/stats/project');
+            $response = $this->guzzle->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $this->decodeResponse($response);
+    }
 }
