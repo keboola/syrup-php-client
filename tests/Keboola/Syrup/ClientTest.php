@@ -693,19 +693,20 @@ class ClientTest extends \PHPUnit_Framework_TestCase
             'token' => 'test',
             'runId' => 'runIdTest',
             'super' => 'docker',
+            'backoffMaxTries' => 1,
         ]);
         $reflection = new \ReflectionClass($client);
         $method = $reflection->getMethod('setUrl');
         $method->setAccessible(true);
-        $method->invoke($client, 'omfg::/mfg.mfg');
+        $method->invoke($client, 'asdfghjkl');
         $method = $reflection->getMethod('setQueueUrl');
         $method->setAccessible(true);
-        $method->invoke($client, 'omfg::/mfg.mfg');
+        $method->invoke($client, 'asdfghjkl');
         try {
             $client->getJob('123');
             $this->fail("Invalid request must raise exception.");
         } catch (ClientException $e) {
-            $this->assertContains('resolve host', $e->getMessage());
+            $this->assertContains('Could not resolve', $e->getMessage());
         }
     }
 
@@ -839,5 +840,41 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("http://queue.local/queue/job/123456", $request->getUri()->__toString());
 
         $this->assertEquals("success", $response["status"]);
+    }
+
+    public function testGetProjectStats()
+    {
+        $mock = new MockHandler([
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                  "jobs": {
+                    "durationSum": 23456
+                  }
+                }'
+            )
+        ]);
+
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $client = new Client([
+            'token' => 'test',
+            'runId' => 'runIdTest',
+            'handler' => $stack,
+        ]);
+        $response = $client->getStats();
+
+        $this->assertCount(1, $container);
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals('https://syrup.keboola.com/docker/stats/project', $request->getUri()->__toString());
+        $this->assertEquals('GET', $request->getMethod());
+        $this->assertEquals('test', $request->getHeader("x-storageapi-token")[0]);
+        $this->assertEquals(23456, $response['jobs']['durationSum']);
     }
 }
