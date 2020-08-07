@@ -877,4 +877,60 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('test', $request->getHeader("x-storageapi-token")[0]);
         $this->assertEquals(23456, $response['jobs']['durationSum']);
     }
+
+    public function testResolveConfiguration()
+    {
+        $componentId = "fakeComponent";
+        $configId = "123";
+        $configVersion = "1";
+
+        $mock = new MockHandler([
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                    "parameters": {
+                        "a": "b"
+                    },
+                    "shared_code_row_ids": [],
+                    "storage": {},
+                    "processors": []
+                }'
+            ),
+        ]);
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $client = new Client([
+            'token' => 'test',
+            'runId' => 'runIdTest',
+            'handler' => $stack,
+        ]);
+        $response = $client->resolveConfiguration($componentId, $configId, $configVersion);
+
+        $this->assertCount(1, $container);
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals('https://syrup.keboola.com/docker/configuration/resolve', $request->getUri()->__toString());
+        $this->assertEquals('POST', $request->getMethod());
+        $this->assertEquals('test', $request->getHeader("x-storageapi-token")[0]);
+        $this->assertEquals(
+            '{"componentId":"fakeComponent","configId":"123","configVersion":"1"}',
+            $request->getBody()->read($request->getBody()->getSize())
+        );
+        $this->assertEquals(
+            [
+                'parameters' => [
+                    'a' => 'b',
+                ],
+                'shared_code_row_ids' => [],
+                'storage' => [],
+                'processors' => [],
+            ],
+            $response
+        );
+    }
 }
