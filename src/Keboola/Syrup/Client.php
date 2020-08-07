@@ -436,4 +436,33 @@ class Client
         }
         return $this->decodeResponse($response);
     }
+
+    /**
+     * @param string $componentId
+     * @param string $configId
+     * @param string $configVersion
+     * @return array
+     * @throws ClientException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function resolveConfiguration($componentId, $configId, $configVersion)
+    {
+        $uriBase = (substr($this->url, -1) === '/') ? $this->url : $this->url .= '/';
+        try {
+            $request = new Request(
+                'POST',
+                $uriBase . 'docker/configuration/resolve',
+                [],
+                json_encode([
+                    'componentId' => $componentId,
+                    'configId' => $configId,
+                    'configVersion' => $configVersion,
+                ])
+            );
+            $response = $this->guzzle->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $this->decodeResponse($response);
+    }
 }
