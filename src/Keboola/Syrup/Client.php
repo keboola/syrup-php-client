@@ -453,8 +453,7 @@ class Client
         $configVersion,
         $variableValuesId = null,
         $variableValuesData = []
-    )
-    {
+    ) {
         $uriBase = (substr($this->url, -1) === '/') ? $this->url : $this->url .= '/';
         $body = [
             'componentId' => $componentId,
