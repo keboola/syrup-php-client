@@ -890,14 +890,41 @@ class ClientTest extends \PHPUnit_Framework_TestCase
                 ['Content-Type' => 'application/json'],
                 '{
                     "parameters": {
-                        "a": "b"
+                        "a": "foo", 
+                        "b": "bar", 
+                        "c": "baz"
                     },
-                    "shared_code_row_ids": [],
-                    "storage": {},
-                    "processors": []
+                    "shared_code_row_ids" => [],
+                    "storage": [],
+                    "processors": {
+                        "before": [],
+                        "after": [],
+                    },
+                    "variables_id": "111",
+                    "variables_values_id": "222",
+                    "shared_code_id": "333",
                 }'
             ),
         ]);
+
+        $variableValuesData = [
+            'values' => [
+                [
+                    'name' => 'firstvar',
+                    'value' => 'foo',
+                ],
+                [
+                    'name' => 'secondvar',
+                    'value' => 'bar',
+                ],
+                [
+                    'name' => 'thirdvar',
+                    'value' => 'baz',
+                ],
+            ],
+        ];
+
+
         // Add the history middleware to the handler stack.
         $container = [];
         $history = Middleware::history($container);
@@ -909,7 +936,13 @@ class ClientTest extends \PHPUnit_Framework_TestCase
             'runId' => 'runIdTest',
             'handler' => $stack,
         ]);
-        $response = $client->resolveConfiguration($componentId, $configId, $configVersion);
+        $response = $client->resolveConfiguration(
+            $componentId,
+            $configId,
+            $configVersion,
+            null,
+            $variableValuesData
+        );
 
         $this->assertCount(1, $container);
         /** @var Request $request */
@@ -924,13 +957,21 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(
             [
                 'parameters' => [
-                    'a' => 'b',
+                    'a' => 'foo',
+                    'b' => 'bar',
+                    'c' => 'baz',
                 ],
                 'shared_code_row_ids' => [],
                 'storage' => [],
-                'processors' => [],
+                'processors' => [
+                    'before' => [],
+                    'after' => [],
+                ],
+                'variables_id' => "111",
+                'variables_values_id' => "222",
+                'shared_code_id' => "333",
             ],
-            $response
+            $response['configuration']
         );
     }
 }

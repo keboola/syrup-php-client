@@ -441,23 +441,38 @@ class Client
      * @param string $componentId
      * @param string $configId
      * @param string $configVersion
+     * @param ?string $variableValuesId
+     * @param array $variableValuesData
      * @return array
      * @throws ClientException
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function resolveConfiguration($componentId, $configId, $configVersion)
+    public function resolveConfiguration(
+        $componentId,
+        $configId,
+        $configVersion,
+        $variableValuesId = null,
+        $variableValuesData = []
+    )
     {
         $uriBase = (substr($this->url, -1) === '/') ? $this->url : $this->url .= '/';
+        $body = [
+            'componentId' => $componentId,
+            'configId' => $configId,
+            'configVersion' => $configVersion,
+        ];
+        if ($variableValuesId) {
+            $body['variableValuesId'] = $variableValuesId;
+        }
+        if (!empty($variableValuesData)) {
+            $body['variableValuesData'] = $variableValuesData;
+        }
         try {
             $request = new Request(
                 'POST',
                 $uriBase . 'docker/configuration/resolve',
                 [],
-                json_encode([
-                    'componentId' => $componentId,
-                    'configId' => $configId,
-                    'configVersion' => $configVersion,
-                ])
+                json_encode($body)
             );
             $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
