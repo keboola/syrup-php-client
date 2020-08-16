@@ -334,7 +334,11 @@ class Client
      */
     public function getJob($job)
     {
-        $uri = sprintf('%s%s%s', $this->sanitizeBaseUri(), 'queue/job/', $job);
+        if (substr($this->queueUrl, -1) == '/') {
+            $uri = $this->queueUrl . "queue/job/{$job}";
+        } else {
+            $uri = $this->queueUrl . "/queue/job/{$job}";
+        }
         try {
             $request = new Request('GET', $uri);
             $response = $this->guzzle->send($request);
