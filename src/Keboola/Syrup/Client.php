@@ -262,6 +262,11 @@ class Client
         return $data === null ? array() : $data;
     }
 
+    private function sanitizeBaseUri()
+    {
+        return rtrim($this->url, '/') . '/';
+    }
+
     /**
      * Create a new asynchronous job.
      *
@@ -329,11 +334,7 @@ class Client
      */
     public function getJob($job)
     {
-        if (substr($this->queueUrl, -1) == '/') {
-            $uri = $this->queueUrl . "queue/job/{$job}";
-        } else {
-            $uri = $this->queueUrl . "/queue/job/{$job}";
-        }
+        $uri = $this->sanitizeBaseUri() . 'queue/job/{$job}';
         try {
             $request = new Request('GET', $uri);
             $response = $this->guzzle->send($request);
@@ -424,12 +425,44 @@ class Client
     /**
      * @return array
      * @throws ClientException
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function getStats()
     {
-        $uriBase = (substr($this->url, -1) === '/') ? $this->url : $this->url .= '/';
         try {
-            $request = new Request('GET', $uriBase . 'docker/stats/project');
+            $request = new Request('GET', $this->sanitizeBaseUri() . 'docker/stats/project');
+            $response = $this->guzzle->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $this->decodeResponse($response);
+    }
+
+    /**
+     * @param string $dateFrom
+     * @param string $dateTo
+     * @param string $timezoneOffset - if set to null, the timezone of the server will be used
+     * @return array
+     * @throws \Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function getStatsDaily($dateFrom, $dateTo, $timezoneOffset = null)
+    {
+        if (is_null($timezoneOffset)) {
+            $timezoneOffset = (new \DateTime('now'))->format('P');
+        }
+        try {
+            $request = new Request(
+                'GET',
+                $this->sanitizeBaseUri() . 'docker/stats/project/daily',
+                [
+                    'query' => [
+                        'fromDate' => $dateFrom,
+                        'toDate' => $dateTo,
+                        'timezoneOffset' => $timezoneOffset
+                    ]
+                ]
+            );
             $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
