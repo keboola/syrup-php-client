@@ -878,6 +878,56 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(23456, $response['jobs']['durationSum']);
     }
 
+    public function testGetProjectDailyStats()
+    {
+        $mock = new MockHandler([
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                '{
+                  "jobs": [
+                    {
+                      "date": "2020-08-01",
+                      "durationSum": 12
+                    },
+                    {
+                      "date": "2020-08-02",
+                      "durationSum": 0
+                    },
+                    {
+                      "date": "2020-08-03",
+                      "durationSum": 220
+                    }
+                  ]
+                }'
+            )
+        ]);
+
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $client = new Client([
+            'token' => 'test',
+            'runId' => 'runIdTest',
+            'handler' => $stack,
+        ]);
+        $response = $client->getStatsDaily('2020-08-01', '2020-08-03');
+
+        $this->assertCount(1, $container);
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals(
+            'https://syrup.keboola.com/docker/stats/project/daily?fromDate=2020-08-01&toDate=2020-08-03&timezoneOffset=%2B02%3A00',
+            $request->getUri()->__toString()
+        );
+        $this->assertEquals('GET', $request->getMethod());
+        $this->assertEquals('test', $request->getHeader("x-storageapi-token")[0]);
+        $this->assertArrayHasKey('jobs', $response);
+    }
+
     public function testResolveConfiguration()
     {
         $componentId = "fakeComponent";
