@@ -452,21 +452,18 @@ class Client
      */
     public function getStatsDaily($dateFrom, $dateTo, $timezoneOffset = null)
     {
-        if (is_null($timezoneOffset)) {
+        if (!$timezoneOffset) {
             $timezoneOffset = (new \DateTime('now'))->format('P');
         }
+
+        $url = $this->sanitizeBaseUri() . 'docker/stats/project/daily?' . http_build_query([
+            'fromDate' => $dateFrom,
+            'toDate' => $dateTo,
+            'timezoneOffset' => $timezoneOffset
+        ]);
+
         try {
-            $request = new Request(
-                'GET',
-                $this->sanitizeBaseUri() . 'docker/stats/project/daily',
-                [
-                    'query' => [
-                        'fromDate' => $dateFrom,
-                        'toDate' => $dateTo,
-                        'timezoneOffset' => $timezoneOffset
-                    ]
-                ]
-            );
+            $request = new Request('GET', $url);
             $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
