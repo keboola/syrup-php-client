@@ -914,14 +914,18 @@ class ClientTest extends \PHPUnit_Framework_TestCase
             'runId' => 'runIdTest',
             'handler' => $stack,
         ]);
-        $response = $client->getStatsDaily('2020-08-1', '2020-08-3');
+        $response = $client->getStatsDaily('2020-08-01', '2020-08-03');
 
         $this->assertCount(1, $container);
         /** @var Request $request */
         $request = $container[0]['request'];
-        $this->assertEquals('https://syrup.keboola.com/docker/stats/project/daily', $request->getUri()->__toString());
+        $this->assertEquals(
+            'https://syrup.keboola.com/docker/stats/project/daily?fromDate=2020-08-01&toDate=2020-08-03&timezoneOffset=%2B02%3A00',
+            $request->getUri()->__toString()
+        );
         $this->assertEquals('GET', $request->getMethod());
         $this->assertEquals('test', $request->getHeader("x-storageapi-token")[0]);
+        $this->assertArrayHasKey('jobs', $response);
     }
 
     public function testResolveConfiguration()
