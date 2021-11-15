@@ -1029,4 +1029,36 @@ class ClientTest extends \PHPUnit_Framework_TestCase
             $response['configuration']
         );
     }
+
+    /**
+     * Test killJob method.
+     */
+    public function testKillJob()
+    {
+        $mock = new MockHandler([
+            new Response(
+                204,
+                ['Content-Type' => 'application/json']
+            )
+        ]);
+
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $client = new Client([
+            'token' => 'test',
+            'handler' => $stack,
+        ]);
+        $client->killJob(123456);
+
+        $this->assertCount(1, $container);
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals("https://syrup.keboola.com/queue/job/123456/kill", $request->getUri()->__toString());
+        $this->assertEquals("POST", $request->getMethod());
+        $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
+    }
 }

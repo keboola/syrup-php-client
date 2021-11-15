@@ -513,4 +513,26 @@ class Client
         }
         return $this->decodeResponse($response);
     }
+
+    /**
+     * @param $job
+     * @return array
+     * @throws ClientException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function killJob($job)
+    {
+        if (substr($this->queueUrl, -1) == '/') {
+            $uri = $this->queueUrl . "queue/job/{$job}/kill";
+        } else {
+            $uri = $this->queueUrl . "/queue/job/{$job}/kill";
+        }
+        try {
+            $request = new Request('POST', $uri);
+            $response = $this->guzzle->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $this->decodeResponse($response);
+    }
 }
