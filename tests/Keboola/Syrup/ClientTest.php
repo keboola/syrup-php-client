@@ -1037,8 +1037,9 @@ class ClientTest extends \PHPUnit_Framework_TestCase
     {
         $mock = new MockHandler([
             new Response(
-                204,
-                ['Content-Type' => 'application/json']
+                202,
+                ['Content-Type' => 'application/json'],
+                '{"message":"job termination request accepted for processing"}'
             )
         ]);
 
@@ -1060,5 +1061,171 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("https://syrup.keboola.com/queue/job/123456/kill", $request->getUri()->__toString());
         $this->assertEquals("POST", $request->getMethod());
         $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
+    }
+
+    public function testListJobs()
+    {
+        $mockResponse = '[{
+            "id": 778350626,
+            "runId": "778350627",
+            "lockName": "docker-8786-keboola.ex-google-drive-763493370",
+            "project": {
+              "id": 8786,
+              "name": "Miro - columns debug"
+            },
+            "token": {
+              "id": "397969",
+              "description": "miro@keboola.com"
+            },
+            "component": "docker",
+            "command": "run",
+            "params": {
+              "config": "763493370",
+              "component": "keboola.ex-google-drive",
+              "mode": "run"
+            },
+            "result": {
+              "message": "Job has been terminated"
+            },
+            "status": "terminated",
+            "process": {
+              "host": "ip-10-0-44-138.ec2.internal",
+              "pid": 20146
+            },
+            "createdTime": "2021-11-15T20:12:19+01:00",
+            "startTime": "2021-11-15T20:12:19+01:00",
+            "endTime": "2021-11-15T20:12:27+01:00",
+            "durationSeconds": 8,
+            "waitSeconds": null,
+            "nestingLevel": 0,
+            "error": null,
+            "errorNote": null,
+            "terminatedBy": {
+              "id": "397969",
+              "description": "miro@keboola.com"
+            },
+            "encrypted": null,
+            "usage": null,
+            "_index": "prod_syrup_docker_2017_3",
+            "_type": "jobs",
+            "isFinished": true
+          },
+          {
+            "id": 773441493,
+            "runId": "773441494",
+            "lockName": "docker-8786-keboola.ex-google-drive-763493370",
+            "project": {
+              "id": 8786,
+              "name": "Miro - columns debug"
+            },
+            "token": {
+              "id": "397969",
+              "description": "miro@keboola.com"
+            },
+            "component": "docker",
+            "command": "run",
+            "params": {
+              "config": "763493370",
+              "component": "keboola.ex-google-drive",
+              "mode": "run"
+            },
+            "result": {
+              "message": "Job has been terminated"
+            },
+            "status": "terminated",
+            "process": {
+              "host": "ip-10-0-40-201.ec2.internal",
+              "pid": 30989
+            },
+            "createdTime": "2021-11-04T09:55:39+01:00",
+            "startTime": "2021-11-04T09:55:39+01:00",
+            "endTime": "2021-11-04T09:55:45+01:00",
+            "durationSeconds": 6,
+            "waitSeconds": null,
+            "nestingLevel": 0,
+            "error": null,
+            "errorNote": null,
+            "terminatedBy": {
+              "id": "397969",
+              "description": "miro@keboola.com"
+            },
+            "encrypted": null,
+            "usage": null,
+            "_index": "prod_syrup_docker_2017_3",
+            "_type": "jobs",
+            "isFinished": true
+          },
+          {
+            "id": 773441428,
+            "runId": "773441429",
+            "lockName": "docker-8786-keboola.ex-google-drive-763493370",
+            "project": {
+              "id": 8786,
+              "name": "Miro - columns debug"
+            },
+            "token": {
+              "id": "397969",
+              "description": "miro@keboola.com"
+            },
+            "component": "docker",
+            "command": "run",
+            "params": {
+              "config": "763493370",
+              "component": "keboola.ex-google-drive",
+              "mode": "run"
+            },
+            "result": {
+              "message": "Job has been terminated"
+            },
+            "status": "terminated",
+            "process": {
+              "host": "ip-10-0-44-69.ec2.internal",
+              "pid": 13852
+            },
+            "createdTime": "2021-11-04T09:55:14+01:00",
+            "startTime": "2021-11-04T09:55:15+01:00",
+            "endTime": "2021-11-04T09:55:21+01:00",
+            "durationSeconds": 6,
+            "waitSeconds": null,
+            "nestingLevel": 0,
+            "error": null,
+            "errorNote": null,
+            "terminatedBy": {
+              "id": "397969",
+              "description": "miro@keboola.com"
+            },
+            "encrypted": null,
+            "usage": null,
+            "_index": "prod_syrup_docker_2017_3",
+            "_type": "jobs",
+            "isFinished": true
+          }]';
+
+        $mock = new MockHandler([
+            new Response(
+                200,
+                ['Content-Type' => 'application/json'],
+                $mockResponse
+            )
+        ]);
+
+        // Add the history middleware to the handler stack.
+        $container = [];
+        $history = Middleware::history($container);
+        $stack = HandlerStack::create($mock);
+        $stack->push($history);
+
+        $client = new Client([
+            'token' => 'test',
+            'handler' => $stack,
+        ]);
+        $client->listJobs();
+
+        $this->assertCount(1, $container);
+        /** @var Request $request */
+        $request = $container[0]['request'];
+        $this->assertEquals('https://syrup.keboola.com/queue/jobs?q=&limit=100&offset=0', $request->getUri()->__toString());
+        $this->assertEquals('GET', $request->getMethod());
+        $this->assertEquals('test', $request->getHeader("x-storageapi-token")[0]);
     }
 }
