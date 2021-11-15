@@ -919,8 +919,10 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(1, $container);
         /** @var Request $request */
         $request = $container[0]['request'];
+
+        $timezoneOffset = urlencode((new \DateTime('now'))->format('P'));
         $this->assertEquals(
-            'https://syrup.keboola.com/docker/stats/project/daily?fromDate=2020-08-01&toDate=2020-08-03&timezoneOffset=%2B02%3A00',
+            'https://syrup.keboola.com/docker/stats/project/daily?fromDate=2020-08-01&toDate=2020-08-03&timezoneOffset=' . $timezoneOffset,
             $request->getUri()->__toString()
         );
         $this->assertEquals('GET', $request->getMethod());
