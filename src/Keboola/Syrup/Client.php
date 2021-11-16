@@ -267,6 +267,11 @@ class Client
         return rtrim($this->url, '/') . '/';
     }
 
+    private function sanitizeQueueBaseUri()
+    {
+        return rtrim($this->queueUrl, '/') . '/';
+    }
+
     /**
      * Create a new asynchronous job.
      *
@@ -297,11 +302,7 @@ class Client
             $uriParts[] = $this->super;
         }
         $uriParts[] = $path;
-        if (substr($this->url, -1) == '/') {
-            $uri = $this->url . implode('/', $uriParts);
-        } else {
-            $uri = $this->url . '/' . implode('/', $uriParts);
-        }
+        $uri = $this->sanitizeBaseUri() . implode('/', $uriParts);
         if (isset($options['tag'])) {
             $uri .= '/tag/' . $options['tag'];
         }
@@ -334,11 +335,7 @@ class Client
      */
     public function getJob($job)
     {
-        if (substr($this->queueUrl, -1) == '/') {
-            $uri = $this->queueUrl . "queue/job/{$job}";
-        } else {
-            $uri = $this->queueUrl . "/queue/job/{$job}";
-        }
+        $uri = $this->sanitizeQueueBaseUri() . 'queue/job/' . $job;
         try {
             $request = new Request('GET', $uri);
             $response = $this->guzzle->send($request);
@@ -507,6 +504,49 @@ class Client
                 [],
                 json_encode($body)
             );
+            $response = $this->guzzle->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $this->decodeResponse($response);
+    }
+
+    /**
+     * @param $job
+     * @return array
+     * @throws ClientException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function killJob($job)
+    {
+        $uri = $this->sanitizeQueueBaseUri() . sprintf('queue/job/%s/kill', $job);
+        try {
+            $request = new Request('POST', $uri);
+            $response = $this->guzzle->send($request);
+        } catch (RequestException $e) {
+            throw new ClientException($e->getMessage(), 0, $e);
+        }
+        return $this->decodeResponse($response);
+    }
+
+    /**
+     * @param $query
+     * @param int $limit
+     * @param int $offset
+     * @return array
+     * @throws ClientException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function listJobs($query = '', $limit = 100, $offset = 0)
+    {
+        $uri = $this->sanitizeQueueBaseUri() . 'queue/jobs?' . http_build_query([
+            'q' => $query,
+            'limit' => $limit,
+            'offset' => $offset
+        ]);
+
+        try {
+            $request = new Request('GET', $uri);
             $response = $this->guzzle->send($request);
         } catch (RequestException $e) {
             throw new ClientException($e->getMessage(), 0, $e);
