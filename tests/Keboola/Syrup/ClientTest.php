@@ -1060,7 +1060,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(1, $container);
         /** @var Request $request */
         $request = $container[0]['request'];
-        $this->assertEquals("https://syrup.keboola.com/queue/job/123456/kill", $request->getUri()->__toString());
+        $this->assertEquals("https://syrup.keboola.com/queue/jobs/123456/kill", $request->getUri()->__toString());
         $this->assertEquals("POST", $request->getMethod());
         $this->assertEquals("test", $request->getHeader("x-storageapi-token")[0]);
     }

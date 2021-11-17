@@ -519,7 +519,7 @@ class Client
      */
     public function killJob($job)
     {
-        $uri = $this->sanitizeQueueBaseUri() . sprintf('queue/job/%s/kill', $job);
+        $uri = $this->sanitizeQueueBaseUri() . sprintf('queue/jobs/%s/kill', $job);
         try {
             $request = new Request('POST', $uri);
             $response = $this->guzzle->send($request);
