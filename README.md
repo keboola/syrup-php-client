@@ -102,3 +102,7 @@ $client = new Client([
 
 $response = $client->runAsyncAction("async/docker/1", "DELETE");
 ```
+
+## License
+
+MIT licensed, see [LICENSE](./LICENSE) file.
