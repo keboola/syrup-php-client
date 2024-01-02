@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  tests: &tests
+    image: keboola/syrup-php-client
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./build/logs/:/code/build/logs/
+  dev:
+    <<: *tests
+    volumes:
+      - .:/code

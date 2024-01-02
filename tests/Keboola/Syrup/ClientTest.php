@@ -2,6 +2,7 @@
 
 namespace Keboola\Syrup\Tests;
 
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
@@ -705,7 +706,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         try {
             $client->getJob('123');
             $this->fail("Invalid request must raise exception.");
-        } catch (ClientException $e) {
+        } catch (ConnectException $e) {
             $this->assertContains('Could not resolve', $e->getMessage());
         }
     }
