@@ -1,4 +1,4 @@
-# Syrup PHP Client [![Build Status](https://travis-ci.org/keboola/syrup-php-client.svg?branch=master)](https://travis-ci.org/keboola/syrup-php-client) [![Code Climate](https://codeclimate.com/github/keboola/syrup-php-client/badges/gpa.svg)](https://codeclimate.com/github/keboola/syrup-php-client) [![Test Coverage](https://codeclimate.com/github/keboola/syrup-php-client/badges/coverage.svg)](https://codeclimate.com/github/keboola/syrup-php-client)
+# Syrup PHP Client
 
 Simple PHP wrapper library for Syrup async calls.
 
